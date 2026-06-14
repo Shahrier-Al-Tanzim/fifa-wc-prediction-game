@@ -13,6 +13,7 @@ interface UserProfile {
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [isMock, setIsMock] = useState(false);
   const [activeTab, setActiveTab] = useState<"predictions" | "leaderboard">("predictions");
   const [loading, setLoading] = useState(true);
 
@@ -25,6 +26,7 @@ export default function DashboardPage() {
           router.push("/login");
         } else {
           setUser(data.user);
+          setIsMock(data.isMock || false);
         }
       } catch (err) {
         router.push("/login");
@@ -83,6 +85,15 @@ export default function DashboardPage() {
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-8 flex flex-col gap-6">
+        {isMock && (
+          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-300 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center gap-2">
+            <span>⚠️</span>
+            <span>
+              <strong>Mock Data Active:</strong> `FOOTBALL_API_KEY` is not set. Simulating World Cup match schedules and updates.
+            </span>
+          </div>
+        )}
+
         {/* Profile Card */}
         <div className="bg-radial from-zinc-900 to-zinc-950 border border-zinc-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
