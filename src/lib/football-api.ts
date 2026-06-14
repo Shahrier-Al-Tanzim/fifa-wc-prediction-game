@@ -1,4 +1,7 @@
+import fs from "fs";
+import path from "path";
 import { prisma } from "./prisma";
+import fixtures from "../data/fixtures.json";
 
 export interface SyncResult {
   source: "api" | "mock";
@@ -6,179 +9,113 @@ export interface SyncResult {
   error?: string;
 }
 
-interface FootballDataMatch {
-  id: number;
-  utcDate: string;
-  status: string;
-  homeTeam: { name: string; shortName?: string; tla?: string };
-  awayTeam: { name: string; shortName?: string; tla?: string };
-  score: {
-    fullTime: { home: number | null; away: number | null };
-    winner: string | null;
-  };
-}
-
-// Generates a mock set of World Cup matches for development
-function getMockMatches(): FootballDataMatch[] {
-  const baseDate = new Date();
-  
-  // Create 6 realistic matches centered around today's date
-  return [
-    {
-      id: 9001,
-      utcDate: new Date(baseDate.getTime() - 24 * 60 * 60 * 1000 * 2).toISOString(), // 2 days ago
-      status: "FINISHED",
-      homeTeam: { name: "United States", tla: "USA" },
-      awayTeam: { name: "Mexico", tla: "MEX" },
-      score: {
-        fullTime: { home: 2, away: 1 },
-        winner: "HOME_TEAM",
-      },
-    },
-    {
-      id: 9002,
-      utcDate: new Date(baseDate.getTime() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-      status: "FINISHED",
-      homeTeam: { name: "Spain", tla: "ESP" },
-      awayTeam: { name: "Germany", tla: "GER" },
-      score: {
-        fullTime: { home: 1, away: 1 },
-        winner: "DRAW",
-      },
-    },
-    {
-      id: 9003,
-      utcDate: new Date(baseDate.getTime() - 2 * 60 * 60 * 1000).toISOString(), // Started 2 hours ago
-      status: "IN_PLAY",
-      homeTeam: { name: "Argentina", tla: "ARG" },
-      awayTeam: { name: "Saudi Arabia", tla: "KSA" },
-      score: {
-        fullTime: { home: 1, away: 2 },
-        winner: null,
-      },
-    },
-    {
-      id: 9004,
-      utcDate: new Date(baseDate.getTime() + 4 * 60 * 60 * 1000).toISOString(), // Starts in 4 hours
-      status: "TIMED",
-      homeTeam: { name: "France", tla: "FRA" },
-      awayTeam: { name: "Australia", tla: "AUS" },
-      score: {
-        fullTime: { home: null, away: null },
-        winner: null,
-      },
-    },
-    {
-      id: 9005,
-      utcDate: new Date(baseDate.getTime() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-      status: "TIMED",
-      homeTeam: { name: "Brazil", tla: "BRA" },
-      awayTeam: { name: "Serbia", tla: "SRB" },
-      score: {
-        fullTime: { home: null, away: null },
-        winner: null,
-      },
-    },
-    {
-      id: 9006,
-      utcDate: new Date(baseDate.getTime() + 24 * 60 * 60 * 1000 * 2).toISOString(), // 2 days from now
-      status: "TIMED",
-      homeTeam: { name: "Portugal", tla: "POR" },
-      awayTeam: { name: "Ghana", tla: "GHA" },
-      score: {
-        fullTime: { home: null, away: null },
-        winner: null,
-      },
-    },
-  ];
-}
-
 export async function syncMatches(): Promise<SyncResult> {
-  const apiKey = process.env.FOOTBALL_API_KEY;
-  let matches: FootballDataMatch[] = [];
-  let source: "api" | "mock" = "mock";
-
-  if (apiKey) {
-    try {
-      const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches", {
-        headers: { "X-Auth-Token": apiKey },
-        next: { revalidate: 0 }, // bypass next cache
-      });
-
-      if (!res.ok) {
-        throw new Error(`API returned HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data.matches && Array.isArray(data.matches)) {
-        matches = data.matches;
-        source = "api";
-      } else {
-        throw new Error("Invalid response format from Football API");
-      }
-    } catch (err: any) {
-      console.warn("Failed to fetch matches from Football API, falling back to mock data. Error:", err.message);
-      matches = getMockMatches();
-      source = "mock";
-    }
-  } else {
-    console.info("No FOOTBALL_API_KEY environment variable found. Using simulated mock data.");
-    matches = getMockMatches();
-    source = "mock";
-  }
-
   let updatedCount = 0;
 
-  for (const match of matches) {
-    // Determine status: map to database standard (SCHEDULED, LIVE, FINISHED)
+  // Read results.json dynamically to bypass caching
+  const resultsPath = path.resolve(process.cwd(), "src/data/results.json");
+  let results: Array<{ matchNumber: number; homeScore: number | null; awayScore: number | null; status: string }> = [];
+  
+  if (fs.existsSync(resultsPath)) {
+    try {
+      results = JSON.parse(fs.readFileSync(resultsPath, "utf-8"));
+    } catch (err) {
+      console.error("Failed to parse results.json:", err);
+    }
+  }
+
+  for (const fixture of fixtures) {
+    const kickoff = new Date(fixture.kickoffUtc);
+    
+    // Look up if admin set result in results.json
+    const resultEntry = results.find(r => r.matchNumber === fixture.matchNumber);
+
     let status = "SCHEDULED";
-    if (match.status === "FINISHED") {
-      status = "FINISHED";
-    } else if (match.status === "IN_PLAY" || match.status === "PAUSED" || match.status === "LIVE") {
-      status = "LIVE";
-    }
-
-    // Determine winner: map HOME_TEAM -> HOME, AWAY_TEAM -> AWAY, DRAW -> DRAW, else null
+    let homeScore: number | null = null;
+    let awayScore: number | null = null;
     let winner: string | null = null;
-    if (match.score.winner === "HOME_TEAM") {
-      winner = "HOME";
-    } else if (match.score.winner === "AWAY_TEAM") {
-      winner = "AWAY";
-    } else if (match.score.winner === "DRAW") {
-      winner = "DRAW";
-    }
 
-    const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
-    const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
+    if (resultEntry) {
+      status = resultEntry.status || "SCHEDULED";
+      homeScore = resultEntry.homeScore;
+      awayScore = resultEntry.awayScore;
+
+      if (status === "FINISHED" && homeScore !== null && awayScore !== null) {
+        if (homeScore > awayScore) {
+          winner = "HOME";
+        } else if (awayScore > homeScore) {
+          winner = "AWAY";
+        } else {
+          winner = "DRAW";
+        }
+      }
+    }
 
     try {
-      await prisma.match.upsert({
-        where: { apiMatchId: String(match.id) },
+      const dbMatch = await prisma.match.upsert({
+        where: { apiMatchId: String(fixture.matchNumber) },
         update: {
-          homeTeam,
-          awayTeam,
-          homeScore: match.score.fullTime.home,
-          awayScore: match.score.fullTime.away,
+          homeTeam: fixture.homeTeam,
+          awayTeam: fixture.awayTeam,
+          homeScore,
+          awayScore,
           status,
-          matchDate: new Date(match.utcDate),
+          matchDate: kickoff,
           winner,
         },
         create: {
-          apiMatchId: String(match.id),
-          homeTeam,
-          awayTeam,
-          homeScore: match.score.fullTime.home,
-          awayScore: match.score.fullTime.away,
+          apiMatchId: String(fixture.matchNumber),
+          homeTeam: fixture.homeTeam,
+          awayTeam: fixture.awayTeam,
+          homeScore,
+          awayScore,
           status,
-          matchDate: new Date(match.utcDate),
+          matchDate: kickoff,
           winner,
         },
       });
+
+      // Grade predictions for this match if it is finished
+      if (status === "FINISHED" && winner) {
+        const predictions = await prisma.prediction.findMany({
+          where: { matchId: dbMatch.id },
+        });
+
+        for (const pred of predictions) {
+          const isCorrect = pred.predictedWinner === winner;
+          const pointsAwarded = isCorrect ? 1 : 0;
+          await prisma.prediction.update({
+            where: { id: pred.id },
+            data: { isCorrect, pointsAwarded },
+          });
+        }
+      }
+
       updatedCount++;
     } catch (e: any) {
-      console.error(`Failed to upsert match ID ${match.id}:`, e.message);
+      console.error(`Failed to upsert match ID ${fixture.matchNumber}:`, e.message);
     }
   }
 
-  return { source, updatedCount };
+  // Recalculate all user points
+  try {
+    const users = await prisma.user.findMany();
+    for (const user of users) {
+      const totalPoints = await prisma.prediction.aggregate({
+        where: { userId: user.id },
+        _sum: { pointsAwarded: true },
+      });
+      const points = totalPoints._sum.pointsAwarded || 0;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { points },
+      });
+    }
+  } catch (e: any) {
+    console.error("Failed to recalculate user points:", e.message);
+  }
+
+  return { source: "mock", updatedCount };
 }
+
+

@@ -11,6 +11,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const shouldReset = searchParams.get("reset") === "true";
+
+    if (shouldReset) {
+      const { prisma } = await import("@/lib/prisma");
+      console.info("Reset requested. Wiping existing matches...");
+      await prisma.match.deleteMany();
+    }
+
     const result = await syncMatches();
     return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
