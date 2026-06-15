@@ -15,6 +15,7 @@ export async function GET() {
         id: true,
         username: true,
         points: true,
+        isAdmin: true,
       },
     });
 

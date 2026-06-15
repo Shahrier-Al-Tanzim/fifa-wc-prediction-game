@@ -8,6 +8,7 @@ interface UserProfile {
   id: string;
   username: string;
   points: number;
+  isAdmin: boolean;
 }
 
 interface Match {
@@ -21,12 +22,20 @@ interface Match {
   matchDate: string;
   winner: "HOME" | "AWAY" | "DRAW" | null;
   userPrediction: "HOME" | "AWAY" | "DRAW" | null;
+  otherPredictions?: { username: string; prediction: "HOME" | "AWAY" | "DRAW" }[];
 }
 
 interface LeaderboardUser {
   id: string;
   username: string;
   points: number;
+}
+
+function formatLocalDate(dateObj: Date): string {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function DashboardPage() {
@@ -36,13 +45,16 @@ export default function DashboardPage() {
   const [draftPredictions, setDraftPredictions] = useState<Record<string, "HOME" | "AWAY" | "DRAW">>({});
   const [lockedDates, setLockedDates] = useState<string[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [activeTab, setActiveTab] = useState<"predictions" | "leaderboard">("predictions");
+  const [activeTab, setActiveTab] = useState<"predictions" | "users-predictions" | "leaderboard">("predictions");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ updatedCount: number } | null>(null);
   const [lockingDay, setLockingDay] = useState(false);
+  const [draftResults, setDraftResults] = useState<Record<string, "HOME" | "AWAY" | "DRAW">>({});
+  const [savingResults, setSavingResults] = useState(false);
+  const [syncingPoints, setSyncingPoints] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -71,6 +83,15 @@ export default function DashboardPage() {
           }
         });
         setDraftPredictions(drafts);
+
+        // Load existing winners into draft results
+        const winners: Record<string, "HOME" | "AWAY" | "DRAW"> = {};
+        fetchedMatches.forEach((m) => {
+          if (m.winner) {
+            winners[m.id] = m.winner as "HOME" | "AWAY" | "DRAW";
+          }
+        });
+        setDraftResults(winners);
       }
 
       const leaderboardRes = await fetch("/api/leaderboard");
@@ -117,25 +138,15 @@ export default function DashboardPage() {
     if (matches.length > 0) {
       const dates = Array.from(
         new Set(
-          matches.map((m) =>
-            new Date(m.matchDate).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-            })
-          )
+          matches.map((m) => formatLocalDate(new Date(m.matchDate)))
         )
-      ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      ).sort();
 
       if (!selectedDate) {
         const now = new Date();
         const firstUpcomingMatch = matches.find((m) => new Date(m.matchDate) > now);
         if (firstUpcomingMatch) {
-          const upcomingDateStr = new Date(firstUpcomingMatch.matchDate).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          });
+          const upcomingDateStr = formatLocalDate(new Date(firstUpcomingMatch.matchDate));
           setSelectedDate(upcomingDateStr);
         } else if (dates.length > 0) {
           setSelectedDate(dates[0]);
@@ -157,10 +168,7 @@ export default function DashboardPage() {
   const handlePredictDraft = (matchId: string, selection: "HOME" | "AWAY" | "DRAW") => {
     if (!selectedDate) return;
 
-    const parts = selectedDate.split("/");
-    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-
-    if (lockedDates.includes(formattedDate)) {
+    if (lockedDates.includes(selectedDate)) {
       setSubmitError("Predictions for this day are locked and cannot be changed.");
       setTimeout(() => setSubmitError(null), 3000);
       return;
@@ -177,17 +185,7 @@ export default function DashboardPage() {
     setLockingDay(true);
     setSubmitError(null);
 
-    const parts = selectedDate.split("/");
-    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-
-    const dayMatches = matches.filter((m) => {
-      const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-      return mDate === selectedDate;
-    });
+    const dayMatches = matches.filter((m) => formatLocalDate(new Date(m.matchDate)) === selectedDate);
 
     const predictionsPayload = dayMatches.map((m) => ({
       matchId: m.id,
@@ -201,7 +199,7 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
-        body: JSON.stringify({ dateStr: formattedDate, predictions: predictionsPayload }),
+        body: JSON.stringify({ dateStr: selectedDate, predictions: predictionsPayload }),
       });
 
       const data = await res.json();
@@ -209,7 +207,7 @@ export default function DashboardPage() {
         throw new Error(data.error || "Locking predictions failed");
       }
 
-      setLockedDates((prev) => [...prev, formattedDate]);
+      setLockedDates((prev) => [...prev, selectedDate]);
       await fetchData();
     } catch (err: any) {
       setSubmitError(err.message);
@@ -219,22 +217,66 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAdminUpdateScore = async (matchId: string, homeScore: number, awayScore: number) => {
+  const handleSelectAdminResult = (matchId: string, winner: "HOME" | "AWAY" | "DRAW") => {
+    setDraftResults((prev) => ({
+      ...prev,
+      [matchId]: winner,
+    }));
+  };
+
+  const handleSaveAdminResults = async () => {
+    if (!selectedDate) return;
+    setSavingResults(true);
     setSubmitError(null);
+
+    const dayMatches = matches.filter((m) => formatLocalDate(new Date(m.matchDate)) === selectedDate);
+
+    const resultsPayload = dayMatches.map((m) => ({
+      matchId: m.id,
+      winner: draftResults[m.id],
+    }));
+
     try {
       const res = await fetch("/api/admin/matches", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId, homeScore, awayScore }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        body: JSON.stringify({ dateStr: selectedDate, results: resultsPayload }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Saving match results failed");
+      }
+
+      await fetchData();
+    } catch (err: any) {
+      setSubmitError(err.message);
+      setTimeout(() => setSubmitError(null), 3000);
+    } finally {
+      setSavingResults(false);
+    }
+  };
+
+  const handleSyncPoints = async () => {
+    setSyncingPoints(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/admin/sync-points", {
+        method: "POST",
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to update match score");
+        throw new Error(data.error || "Sync points failed");
       }
       await fetchData();
     } catch (err: any) {
       setSubmitError(err.message);
       setTimeout(() => setSubmitError(null), 3000);
+    } finally {
+      setSyncingPoints(false);
     }
   };
 
@@ -251,32 +293,17 @@ export default function DashboardPage() {
   const now = new Date();
   const uniqueDates = Array.from(
     new Set(
-      matches.map((m) =>
-        new Date(m.matchDate).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        })
-      )
+      matches.map((m) => formatLocalDate(new Date(m.matchDate)))
     )
-  ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  ).sort();
 
-  const filteredMatches = matches.filter((m) => {
-    const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    return mDate === selectedDate;
-  });
+  const filteredMatches = matches.filter((m) => formatLocalDate(new Date(m.matchDate)) === selectedDate);
 
-  const selectedDateFormatted = selectedDate
-    ? (() => {
-        const parts = selectedDate.split("/");
-        return `${parts[2]}-${parts[0]}-${parts[1]}`;
-      })()
-    : null;
-  const isSelectedDateLocked = selectedDateFormatted ? lockedDates.includes(selectedDateFormatted) : false;
+  const selectedDateFormatted = selectedDate;
+  const isSelectedDateLocked = selectedDate ? lockedDates.includes(selectedDate) : false;
+
+  const isDayOver = filteredMatches.length > 0 && filteredMatches.every((m) => new Date(m.matchDate) <= now);
+  const allMatchesResultsSelected = filteredMatches.length > 0 && filteredMatches.every((m) => draftResults[m.id] !== undefined);
 
   // Validation: User must select predictions for all matches on the selected day to enable Save
   const allMatchesPredicted = filteredMatches.every((m) => draftPredictions[m.id] !== undefined);
@@ -334,7 +361,7 @@ export default function DashboardPage() {
             <p className="text-zinc-400 text-sm mt-1">Get ready to predict daily matches and compete with your friends.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
+             <button
               onClick={handleSyncMatches}
               disabled={syncing}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50 cursor-pointer"
@@ -342,6 +369,16 @@ export default function DashboardPage() {
               <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin text-emerald-400" : "text-zinc-400"}`} />
               {syncing ? "Syncing..." : "Sync Fixtures"}
             </button>
+            {user.isAdmin && (
+              <button
+                onClick={handleSyncPoints}
+                disabled={syncingPoints}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-amber-600 border border-amber-500 text-white hover:bg-amber-500 disabled:opacity-50 cursor-pointer shadow-md shadow-amber-950/20"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncingPoints ? "animate-spin text-white" : "text-white"}`} />
+                {syncingPoints ? "Syncing Points..." : "Sync Points"}
+              </button>
+            )}
             <button
               onClick={() => setActiveTab("predictions")}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
@@ -354,6 +391,17 @@ export default function DashboardPage() {
               Predictions
             </button>
             <button
+              onClick={() => setActiveTab("users-predictions")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                activeTab === "users-predictions"
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30"
+                  : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              User's Predictions
+            </button>
+            <button
               onClick={() => setActiveTab("leaderboard")}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                 activeTab === "leaderboard"
@@ -361,7 +409,7 @@ export default function DashboardPage() {
                   : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
               }`}
             >
-              <Users className="h-4 w-4" />
+              <Trophy className="h-4 w-4" />
               Leaderboard
             </button>
           </div>
@@ -379,23 +427,14 @@ export default function DashboardPage() {
                 </label>
                 <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
                   {uniqueDates.map((dateStr) => {
-                    const dateObj = new Date(dateStr);
+                    const dateObj = new Date(dateStr + "T00:00:00");
                     const isSelected = selectedDate === dateStr;
                     const weekday = dateObj.toLocaleDateString("en-US", { weekday: "short" });
                     const dayMonth = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                     
-                    const parts = dateStr.split("/");
-                    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-                    const isLocked = lockedDates.includes(formattedDate);
+                    const isLocked = lockedDates.includes(dateStr);
 
-                    const matchesOnDate = matches.filter(m => {
-                      const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                      });
-                      return mDate === dateStr;
-                    });
+                    const matchesOnDate = matches.filter(m => formatLocalDate(new Date(m.matchDate)) === dateStr);
                     const finishedCount = matchesOnDate.filter(m => m.status === "FINISHED").length;
                     const totalCount = matchesOnDate.length;
 
@@ -433,7 +472,7 @@ export default function DashboardPage() {
             )}
 
             {/* Lock Day Section */}
-            {uniqueDates.length > 0 && selectedDate && (
+            {!user.isAdmin && uniqueDates.length > 0 && selectedDate && (
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-900/40 border border-zinc-850 p-4 rounded-xl gap-4">
                 <div>
                   <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -468,6 +507,38 @@ export default function DashboardPage() {
                       <>
                         <Lock className="h-3.5 w-3.5" />
                         <span>Save & Lock Predictions</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Admin Lock Results Section */}
+            {user.isAdmin && uniqueDates.length > 0 && selectedDate && (
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-900/40 border border-amber-500/10 p-4 rounded-xl gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <Settings className="h-4 w-4 text-amber-400" />
+                    <span>Admin Controls - Set Results</span>
+                  </h4>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Select winners for all matches on this day, then click Save Results to write match outcomes.
+                  </p>
+                </div>
+
+                {filteredMatches.length > 0 && (
+                  <button
+                    onClick={handleSaveAdminResults}
+                    disabled={savingResults || !allMatchesResultsSelected}
+                    className="w-full sm:w-auto px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-amber-950/20 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {savingResults ? (
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    ) : (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-white" />
+                        <span>Save Match Results</span>
                       </>
                     )}
                   </button>
@@ -543,87 +614,95 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Prediction Button Controllers */}
-                    <div className="space-y-2.5">
-                      <div className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
-                        Predict Winner
-                      </div>
+                    {!user.isAdmin && (
+                      <div className="space-y-2.5">
+                        <div className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                          Predict Winner
+                        </div>
 
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          disabled={isMatchLocked}
-                          onClick={() => handlePredictDraft(match.id, "HOME")}
-                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            currentPrediction === "HOME"
-                              ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isMatchLocked
-                              ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                              : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                          }`}
-                        >
-                          {match.homeTeam}
-                        </button>
-                        <button
-                          disabled={isMatchLocked}
-                          onClick={() => handlePredictDraft(match.id, "DRAW")}
-                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            currentPrediction === "DRAW"
-                              ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isMatchLocked
-                              ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                              : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                          }`}
-                        >
-                          Draw
-                        </button>
-                        <button
-                          disabled={isMatchLocked}
-                          onClick={() => handlePredictDraft(match.id, "AWAY")}
-                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            currentPrediction === "AWAY"
-                              ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isMatchLocked
-                              ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                              : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                          }`}
-                        >
-                          {match.awayTeam}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Admin Panel Score Setter */}
-                    {user.username.toLowerCase() === "admin" && (
-                      <div className="mt-3 pt-3 border-t border-zinc-850 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-zinc-950/40 p-3 rounded-lg border border-amber-500/10">
-                        <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                          <Settings className="h-3 w-3" />
-                          <span>Admin Control</span>
-                        </span>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <input
-                            type="number"
-                            placeholder="Home"
-                            defaultValue={match.homeScore ?? ""}
-                            id={`admin-home-${match.id}`}
-                            className="w-12 px-1.5 py-1 text-center bg-zinc-900 border border-zinc-800 rounded text-xs text-white placeholder-zinc-750 focus:outline-hidden focus:border-amber-500"
-                          />
-                          <span className="text-zinc-600">-</span>
-                          <input
-                            type="number"
-                            placeholder="Away"
-                            defaultValue={match.awayScore ?? ""}
-                            id={`admin-away-${match.id}`}
-                            className="w-12 px-1.5 py-1 text-center bg-zinc-900 border border-zinc-800 rounded text-xs text-white placeholder-zinc-750 focus:outline-hidden focus:border-amber-500"
-                          />
+                        <div className="grid grid-cols-3 gap-2">
                           <button
-                            onClick={async () => {
-                              const homeVal = (document.getElementById(`admin-home-${match.id}`) as HTMLInputElement)?.value;
-                              const awayVal = (document.getElementById(`admin-away-${match.id}`) as HTMLInputElement)?.value;
-                              if (homeVal === "" || awayVal === "") return;
-                              await handleAdminUpdateScore(match.id, parseInt(homeVal), parseInt(awayVal));
-                            }}
-                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded transition-all cursor-pointer w-full sm:w-auto"
+                            disabled={isMatchLocked}
+                            onClick={() => handlePredictDraft(match.id, "HOME")}
+                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              currentPrediction === "HOME"
+                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
+                                : isMatchLocked
+                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
                           >
-                            Set Result
+                            {match.homeTeam}
+                          </button>
+                          <button
+                            disabled={isMatchLocked}
+                            onClick={() => handlePredictDraft(match.id, "DRAW")}
+                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              currentPrediction === "DRAW"
+                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
+                                : isMatchLocked
+                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            Draw
+                          </button>
+                          <button
+                            disabled={isMatchLocked}
+                            onClick={() => handlePredictDraft(match.id, "AWAY")}
+                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              currentPrediction === "AWAY"
+                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
+                                : isMatchLocked
+                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            {match.awayTeam}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin Panel Winner Selector */}
+                    {user.isAdmin && (
+                      <div className="mt-3 pt-3 border-t border-zinc-850 flex flex-col gap-3 bg-zinc-950/40 p-3 rounded-lg border border-amber-500/10">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                            <Settings className="h-3 w-3" />
+                            <span>Admin Control</span>
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            onClick={() => handleSelectAdminResult(match.id, "HOME")}
+                            className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              draftResults[match.id] === "HOME"
+                                ? "bg-amber-600 border-amber-500 text-white shadow-md shadow-amber-900/30"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            {match.homeTeam} Win
+                          </button>
+                          <button
+                            onClick={() => handleSelectAdminResult(match.id, "DRAW")}
+                            className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              draftResults[match.id] === "DRAW"
+                                ? "bg-amber-600 border-amber-500 text-white shadow-md shadow-amber-900/30"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            Draw
+                          </button>
+                          <button
+                            onClick={() => handleSelectAdminResult(match.id, "AWAY")}
+                            className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              draftResults[match.id] === "AWAY"
+                                ? "bg-amber-600 border-amber-500 text-white shadow-md shadow-amber-900/30"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            {match.awayTeam} Win
                           </button>
                         </div>
                       </div>
@@ -662,12 +741,156 @@ export default function DashboardPage() {
                         )}
                       </div>
                     )}
+
+                    {/* Other Users' Predictions */}
+                    {match.otherPredictions && match.otherPredictions.length > 0 && (
+                      <div className="mt-2 pt-2.5 border-t border-zinc-850 flex flex-col gap-1.5">
+                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                          Community Predictions
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {match.otherPredictions.map((pred, idx) => (
+                            <div
+                              key={idx}
+                              className="text-[11px] px-2 py-1 rounded-md bg-zinc-950/60 border border-zinc-850 text-zinc-300 flex items-center gap-1"
+                            >
+                              <span className="font-semibold text-zinc-400">{pred.username}:</span>
+                              <span className="text-emerald-400 font-bold">
+                                {pred.prediction === "HOME"
+                                  ? match.homeTeam
+                                  : pred.prediction === "AWAY"
+                                  ? match.awayTeam
+                                  : "Draw"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
             {/* Empty state */}
+            {filteredMatches.length === 0 && (
+              <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-12 text-center text-zinc-500 text-sm">
+                No fixtures scheduled for this date.
+              </div>
+            )}
+          </div>
+        ) : activeTab === "users-predictions" ? (
+          <div className="space-y-6">
+            {/* Date Picker Bar */}
+            {uniqueDates.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-emerald-400" />
+                  Select Tournament Date
+                </label>
+                <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                  {uniqueDates.map((dateStr) => {
+                    const dateObj = new Date(dateStr + "T00:00:00");
+                    const isSelected = selectedDate === dateStr;
+                    const weekday = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+                    const dayMonth = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    
+                    const isLocked = lockedDates.includes(dateStr);
+
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => setSelectedDate(dateStr)}
+                        className={`flex flex-col items-center min-w-[95px] p-2.5 rounded-xl border transition-all cursor-pointer relative ${
+                          isSelected
+                            ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-900/30 scale-105"
+                            : "bg-zinc-900 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        }`}
+                      >
+                        {isLocked && (
+                          <span className="absolute top-1 right-1.5 text-[10px] text-amber-400">
+                            🔒
+                          </span>
+                        )}
+                        <span className={`text-[10px] uppercase font-semibold ${isSelected ? "text-emerald-100" : "text-zinc-500"}`}>
+                          {weekday}
+                        </span>
+                        <span className="text-sm font-bold mt-0.5 leading-none">
+                          {dayMonth}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Predictions List - Grouped by User */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {leaderboard.map((player) => {
+                const isSelf = player.id === user.id;
+
+                return (
+                  <div
+                    key={player.id}
+                    className="bg-zinc-900/40 border border-zinc-850 p-5 rounded-xl flex flex-col gap-4 hover:border-zinc-850 transition-all"
+                  >
+                    <h4 className={`text-sm font-bold border-b border-zinc-850 pb-2 flex items-center justify-between ${
+                      isSelf ? "text-emerald-400" : "text-white"
+                    }`}>
+                      <span>{player.username}'s Predictions</span>
+                      {isSelf && <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md font-semibold uppercase">You</span>}
+                    </h4>
+
+                    <div className="divide-y divide-zinc-850/60">
+                      {filteredMatches.map((match) => {
+                        const isKickoffPassed = new Date(match.matchDate) <= now;
+                        const isDayLocked = selectedDate ? lockedDates.includes(selectedDate) : false;
+                        const showOthers = isDayLocked || isKickoffPassed;
+
+                        let predictionText = "No Prediction";
+                        
+                        if (isSelf) {
+                          const pred = draftPredictions[match.id];
+                          if (pred === "HOME") predictionText = match.homeTeam;
+                          else if (pred === "AWAY") predictionText = match.awayTeam;
+                          else if (pred === "DRAW") predictionText = "Draw";
+                        } else {
+                          if (showOthers && match.otherPredictions) {
+                            const otherPred = match.otherPredictions.find(p => p.username === player.username);
+                            if (otherPred) {
+                              if (otherPred.prediction === "HOME") predictionText = match.homeTeam;
+                              else if (otherPred.prediction === "AWAY") predictionText = match.awayTeam;
+                              else if (otherPred.prediction === "DRAW") predictionText = "Draw";
+                            }
+                          } else {
+                            predictionText = "🔒 Hidden";
+                          }
+                        }
+
+                        return (
+                          <div key={match.id} className="flex justify-between items-center py-2.5 text-xs">
+                            <span className="text-zinc-400 font-medium max-w-[60%] truncate">
+                              {match.homeTeam} vs {match.awayTeam}
+                            </span>
+                            <span className={`font-bold ${
+                              predictionText === "🔒 Hidden" 
+                                ? "text-amber-400/80" 
+                                : predictionText === "No Prediction"
+                                ? "text-zinc-650"
+                                : "text-emerald-400"
+                            }`}>
+                              {predictionText}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             {filteredMatches.length === 0 && (
               <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-12 text-center text-zinc-500 text-sm">
                 No fixtures scheduled for this date.

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { updateMatchResult } from "@/lib/grading";
+import { prisma } from "@/lib/prisma";
+import { getLocalDateStr } from "@/lib/date-utils";
 
 export async function POST(req: Request) {
   try {
@@ -9,37 +10,87 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Simple role-based guard: only allow username "admin" to manage matches
-    if (session.username.toLowerCase() !== "admin") {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.id },
+      select: { isAdmin: true },
+    });
+
+    if (!dbUser || !dbUser.isAdmin) {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
-    const { matchId, homeScore, awayScore } = await req.json();
+    const { dateStr, results } = await req.json();
 
-    if (!matchId || homeScore === undefined || awayScore === undefined) {
+    if (!dateStr || !results || !Array.isArray(results)) {
       return NextResponse.json(
-        { error: "matchId, homeScore, and awayScore are required" },
+        { error: "dateStr and results array are required" },
         { status: 400 }
       );
     }
 
-    const parsedHomeScore = parseInt(homeScore);
-    const parsedAwayScore = parseInt(awayScore);
+    const matchIds = results.map((r) => r.matchId);
 
-    if (isNaN(parsedHomeScore) || isNaN(parsedAwayScore)) {
-      return NextResponse.json(
-        { error: "Scores must be numeric values" },
-        { status: 400 }
-      );
+    // Fetch matches
+    const matches = await prisma.match.findMany({
+      where: { id: { in: matchIds } },
+    });
+
+    if (matches.length < matchIds.length) {
+      return NextResponse.json({ error: "One or more matchIds are invalid" }, { status: 400 });
     }
 
-    await updateMatchResult(matchId, parsedHomeScore, parsedAwayScore);
+    // Verify all matches on this day have kicked off
+    const now = new Date();
+    const timeZone = req.headers.get("x-timezone") || "UTC";
+
+    // Validate matches actually belong to the targeted day
+    for (const match of matches) {
+      const matchLocalDate = getLocalDateStr(match.matchDate, timeZone);
+      if (matchLocalDate !== dateStr) {
+        return NextResponse.json(
+          { error: `Match ${match.homeTeam} vs ${match.awayTeam} does not belong to ${dateStr}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Save winners using a transaction
+    await prisma.$transaction(async (tx) => {
+      for (const res of results) {
+        let homeScore = 0;
+        let awayScore = 0;
+        if (res.winner === "HOME") {
+          homeScore = 1;
+          awayScore = 0;
+        } else if (res.winner === "AWAY") {
+          homeScore = 0;
+          awayScore = 1;
+        }
+
+        // Upsert into Result table
+        await tx.result.upsert({
+          where: { matchId: res.matchId },
+          update: { winner: res.winner },
+          create: { matchId: res.matchId, winner: res.winner },
+        });
+
+        await tx.match.update({
+          where: { id: res.matchId },
+          data: {
+            homeScore,
+            awayScore,
+            status: "FINISHED",
+            winner: res.winner,
+          },
+        });
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("Admin match update failed:", error);
+    console.error("Admin batch result save failed:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to update match" },
+      { error: error.message || "Failed to save results" },
       { status: 500 }
     );
   }

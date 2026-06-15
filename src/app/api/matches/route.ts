@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { syncMatches } from "@/lib/football-api";
+import { getLocalDateStr } from "@/lib/date-utils";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getSession();
+    const timeZone = req.headers.get("x-timezone") || "UTC";
 
     // Self-seeding: if no matches exist in the database, sync them automatically
     const count = await prisma.match.count();
@@ -14,31 +16,52 @@ export async function GET() {
       await syncMatches();
     }
 
-    // Fetch all matches
+    // Fetch all matches with results
     const matches = await prisma.match.findMany({
       orderBy: { matchDate: "asc" },
+      include: {
+        result: true,
+      },
     });
 
-    // If not authenticated, return matches without user predictions
+    // Fetch all predictions with user info
+    const allPredictions = await prisma.prediction.findMany({
+      include: {
+        user: {
+          select: { username: true }
+        }
+      }
+    });
+
+    // Group predictions by matchId
+    const predictionsByMatch = new Map<string, Array<{ username: string; prediction: string }>>();
+    allPredictions.forEach((p) => {
+      const list = predictionsByMatch.get(p.matchId) || [];
+      list.push({ username: p.user.username, prediction: p.predictedWinner });
+      predictionsByMatch.set(p.matchId, list);
+    });
+
+    const now = new Date();
+
     if (!session) {
+      const matchesWithOthers = matches.map((match) => {
+        const isKickoffPassed = now >= new Date(match.matchDate);
+        const others = predictionsByMatch.get(match.id) || [];
+        // Extract plain match fields to avoid sending relation objects
+        const { result, ...matchData } = match;
+        return {
+          ...matchData,
+          winner: result ? result.winner : matchData.winner,
+          userPrediction: null,
+          otherPredictions: isKickoffPassed ? others : [],
+        };
+      });
+
       return NextResponse.json({
-        matches: matches.map(m => ({ ...m, userPrediction: null })),
+        matches: matchesWithOthers,
         lockedDates: [],
       });
     }
-
-    // Fetch user predictions
-    const predictions = await prisma.prediction.findMany({
-      where: { userId: session.id },
-    });
-
-    // Map predictions to matches
-    const predictionMap = new Map(predictions.map((p) => [p.matchId, p.predictedWinner]));
-
-    const matchesWithPredictions = matches.map((match) => ({
-      ...match,
-      userPrediction: predictionMap.get(match.id) || null,
-    }));
 
     // Fetch user day locks
     const dayLocks = await prisma.dayLock.findMany({
@@ -46,6 +69,34 @@ export async function GET() {
       select: { dateStr: true },
     });
     const lockedDates = dayLocks.map((d) => d.dateStr);
+
+    const matchesWithPredictions = matches.map((match) => {
+      const localDateStr = getLocalDateStr(match.matchDate, timeZone);
+      const isDayLocked = lockedDates.includes(localDateStr);
+      const isKickoffPassed = now >= new Date(match.matchDate);
+
+      const allPredsForMatch = predictionsByMatch.get(match.id) || [];
+
+      // Filter predictions:
+      // Current user can see other users' predictions ONLY IF they have locked this day OR if the match has kicked off.
+      // Filter out the current user's prediction from otherPredictions to avoid duplication.
+      const showOthers = isDayLocked || isKickoffPassed;
+
+      const otherPredictions = showOthers
+        ? allPredsForMatch.filter((p) => p.username !== session.username)
+        : [];
+
+      // Fetch user's own prediction
+      const userPred = allPredsForMatch.find((p) => p.username === session.username);
+
+      const { result, ...matchData } = match;
+      return {
+        ...matchData,
+        winner: result ? result.winner : matchData.winner,
+        userPrediction: userPred ? userPred.prediction : null,
+        otherPredictions,
+      };
+    });
 
     return NextResponse.json({
       matches: matchesWithPredictions,

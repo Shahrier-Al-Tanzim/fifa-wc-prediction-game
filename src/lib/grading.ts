@@ -1,24 +1,30 @@
 import { prisma } from "./prisma";
 
 export async function gradePredictions(): Promise<number> {
-  // 1. Find all finished matches that have pending predictions (predictions where isCorrect is null)
+  // 1. Find all matches with a Result and grade their pending predictions (where isCorrect is null)
   const pendingPredictions = await prisma.prediction.findMany({
     where: {
       isCorrect: null,
       match: {
-        status: "FINISHED",
-        winner: { not: null },
+        result: { isNot: null },
       },
     },
     include: {
-      match: true,
+      match: {
+        include: {
+          result: true,
+        },
+      },
     },
   });
 
   let gradedCount = 0;
 
   for (const prediction of pendingPredictions) {
-    const isCorrect = prediction.predictedWinner === prediction.match.winner;
+    const winner = prediction.match.result?.winner;
+    if (!winner) continue;
+
+    const isCorrect = prediction.predictedWinner === winner;
     const pointsAwarded = isCorrect ? 1 : 0;
 
     // Update prediction status
@@ -56,6 +62,7 @@ export async function gradePredictions(): Promise<number> {
 
   return gradedCount;
 }
+
 export async function updateMatchResult(matchId: string, homeScore: number, awayScore: number): Promise<boolean> {
   // Determine winner: HOME, AWAY, or DRAW
   let winner = "DRAW";
@@ -74,6 +81,13 @@ export async function updateMatchResult(matchId: string, homeScore: number, away
       status: "FINISHED",
       winner,
     },
+  });
+
+  // Upsert into Result table
+  await prisma.result.upsert({
+    where: { matchId },
+    update: { winner },
+    create: { matchId, winner },
   });
 
   // Run the grading process to update predictions & user points
