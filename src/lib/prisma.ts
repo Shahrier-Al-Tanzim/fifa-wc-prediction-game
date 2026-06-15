@@ -1,13 +1,25 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as { prisma: any };
 
-const databaseUrl = process.env.DATABASE_URL || "prisma+postgres://localhost:51213/?api_key=dummy";
+const databaseUrl = process.env.DATABASE_URL || "";
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    accelerateUrl: databaseUrl,
-  });
+let prismaInstance: PrismaClient;
+
+if (globalForPrisma.prisma) {
+  prismaInstance = globalForPrisma.prisma;
+} else {
+  if (databaseUrl) {
+    const pool = new Pool({ connectionString: databaseUrl });
+    const adapter = new PrismaPg(pool);
+    prismaInstance = new PrismaClient({ adapter });
+  } else {
+    prismaInstance = new PrismaClient();
+  }
+}
+
+export const prisma = prismaInstance;
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

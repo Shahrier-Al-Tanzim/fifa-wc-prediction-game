@@ -12,6 +12,7 @@ model User {
   passwordHash String
   points       Int          @default(0)
   predictions  Prediction[]
+  dayLocks     DayLock[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }
@@ -45,4 +46,15 @@ model Prediction {
   match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@unique([userId, matchId])
+}
+
+model DayLock {
+  id        String   @id @default(uuid())
+  userId    String
+  dateStr   String   // Date formatted as "YYYY-MM-DD"
+  lockedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dateStr])
 }
