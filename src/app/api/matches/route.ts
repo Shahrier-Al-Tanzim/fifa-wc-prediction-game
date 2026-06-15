@@ -16,9 +16,12 @@ export async function GET(req: Request) {
       await syncMatches();
     }
 
-    // Fetch all matches
+    // Fetch all matches with results
     const matches = await prisma.match.findMany({
       orderBy: { matchDate: "asc" },
+      include: {
+        result: true,
+      },
     });
 
     // Fetch all predictions with user info
@@ -44,8 +47,11 @@ export async function GET(req: Request) {
       const matchesWithOthers = matches.map((match) => {
         const isKickoffPassed = now >= new Date(match.matchDate);
         const others = predictionsByMatch.get(match.id) || [];
+        // Extract plain match fields to avoid sending relation objects
+        const { result, ...matchData } = match;
         return {
-          ...match,
+          ...matchData,
+          winner: result ? result.winner : matchData.winner,
           userPrediction: null,
           otherPredictions: isKickoffPassed ? others : [],
         };
@@ -83,8 +89,10 @@ export async function GET(req: Request) {
       // Fetch user's own prediction
       const userPred = allPredsForMatch.find((p) => p.username === session.username);
 
+      const { result, ...matchData } = match;
       return {
-        ...match,
+        ...matchData,
+        winner: result ? result.winner : matchData.winner,
         userPrediction: userPred ? userPred.prediction : null,
         otherPredictions,
       };

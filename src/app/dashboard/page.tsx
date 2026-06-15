@@ -8,6 +8,7 @@ interface UserProfile {
   id: string;
   username: string;
   points: number;
+  isAdmin: boolean;
 }
 
 interface Match {
@@ -51,6 +52,9 @@ export default function DashboardPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ updatedCount: number } | null>(null);
   const [lockingDay, setLockingDay] = useState(false);
+  const [draftResults, setDraftResults] = useState<Record<string, "HOME" | "AWAY" | "DRAW">>({});
+  const [savingResults, setSavingResults] = useState(false);
+  const [syncingPoints, setSyncingPoints] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -79,6 +83,15 @@ export default function DashboardPage() {
           }
         });
         setDraftPredictions(drafts);
+
+        // Load existing winners into draft results
+        const winners: Record<string, "HOME" | "AWAY" | "DRAW"> = {};
+        fetchedMatches.forEach((m) => {
+          if (m.winner) {
+            winners[m.id] = m.winner as "HOME" | "AWAY" | "DRAW";
+          }
+        });
+        setDraftResults(winners);
       }
 
       const leaderboardRes = await fetch("/api/leaderboard");
@@ -204,22 +217,66 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAdminUpdateScore = async (matchId: string, homeScore: number, awayScore: number) => {
+  const handleSelectAdminResult = (matchId: string, winner: "HOME" | "AWAY" | "DRAW") => {
+    setDraftResults((prev) => ({
+      ...prev,
+      [matchId]: winner,
+    }));
+  };
+
+  const handleSaveAdminResults = async () => {
+    if (!selectedDate) return;
+    setSavingResults(true);
     setSubmitError(null);
+
+    const dayMatches = matches.filter((m) => formatLocalDate(new Date(m.matchDate)) === selectedDate);
+
+    const resultsPayload = dayMatches.map((m) => ({
+      matchId: m.id,
+      winner: draftResults[m.id],
+    }));
+
     try {
       const res = await fetch("/api/admin/matches", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId, homeScore, awayScore }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        body: JSON.stringify({ dateStr: selectedDate, results: resultsPayload }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Saving match results failed");
+      }
+
+      await fetchData();
+    } catch (err: any) {
+      setSubmitError(err.message);
+      setTimeout(() => setSubmitError(null), 3000);
+    } finally {
+      setSavingResults(false);
+    }
+  };
+
+  const handleSyncPoints = async () => {
+    setSyncingPoints(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/admin/sync-points", {
+        method: "POST",
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to update match score");
+        throw new Error(data.error || "Sync points failed");
       }
       await fetchData();
     } catch (err: any) {
       setSubmitError(err.message);
       setTimeout(() => setSubmitError(null), 3000);
+    } finally {
+      setSyncingPoints(false);
     }
   };
 
@@ -244,6 +301,9 @@ export default function DashboardPage() {
 
   const selectedDateFormatted = selectedDate;
   const isSelectedDateLocked = selectedDate ? lockedDates.includes(selectedDate) : false;
+
+  const isDayOver = filteredMatches.length > 0 && filteredMatches.every((m) => new Date(m.matchDate) <= now);
+  const allMatchesResultsSelected = filteredMatches.length > 0 && filteredMatches.every((m) => draftResults[m.id] !== undefined);
 
   // Validation: User must select predictions for all matches on the selected day to enable Save
   const allMatchesPredicted = filteredMatches.every((m) => draftPredictions[m.id] !== undefined);
@@ -301,7 +361,7 @@ export default function DashboardPage() {
             <p className="text-zinc-400 text-sm mt-1">Get ready to predict daily matches and compete with your friends.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
+             <button
               onClick={handleSyncMatches}
               disabled={syncing}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50 cursor-pointer"
@@ -309,6 +369,16 @@ export default function DashboardPage() {
               <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin text-emerald-400" : "text-zinc-400"}`} />
               {syncing ? "Syncing..." : "Sync Fixtures"}
             </button>
+            {user.isAdmin && (
+              <button
+                onClick={handleSyncPoints}
+                disabled={syncingPoints}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-amber-600 border border-amber-500 text-white hover:bg-amber-500 disabled:opacity-50 cursor-pointer shadow-md shadow-amber-950/20"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncingPoints ? "animate-spin text-white" : "text-white"}`} />
+                {syncingPoints ? "Syncing Points..." : "Sync Points"}
+              </button>
+            )}
             <button
               onClick={() => setActiveTab("predictions")}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
@@ -402,7 +472,7 @@ export default function DashboardPage() {
             )}
 
             {/* Lock Day Section */}
-            {uniqueDates.length > 0 && selectedDate && (
+            {!user.isAdmin && uniqueDates.length > 0 && selectedDate && (
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-900/40 border border-zinc-850 p-4 rounded-xl gap-4">
                 <div>
                   <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -437,6 +507,38 @@ export default function DashboardPage() {
                       <>
                         <Lock className="h-3.5 w-3.5" />
                         <span>Save & Lock Predictions</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Admin Lock Results Section */}
+            {user.isAdmin && uniqueDates.length > 0 && selectedDate && (
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-900/40 border border-amber-500/10 p-4 rounded-xl gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <Settings className="h-4 w-4 text-amber-400" />
+                    <span>Admin Controls - Set Results</span>
+                  </h4>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Select winners for all matches on this day, then click Save Results to write match outcomes.
+                  </p>
+                </div>
+
+                {filteredMatches.length > 0 && (
+                  <button
+                    onClick={handleSaveAdminResults}
+                    disabled={savingResults || !allMatchesResultsSelected}
+                    className="w-full sm:w-auto px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-amber-950/20 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {savingResults ? (
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    ) : (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-white" />
+                        <span>Save Match Results</span>
                       </>
                     )}
                   </button>
@@ -512,87 +614,95 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Prediction Button Controllers */}
-                    <div className="space-y-2.5">
-                      <div className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
-                        Predict Winner
-                      </div>
+                    {!user.isAdmin && (
+                      <div className="space-y-2.5">
+                        <div className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                          Predict Winner
+                        </div>
 
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          disabled={isMatchLocked}
-                          onClick={() => handlePredictDraft(match.id, "HOME")}
-                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            currentPrediction === "HOME"
-                              ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isMatchLocked
-                              ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                              : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                          }`}
-                        >
-                          {match.homeTeam}
-                        </button>
-                        <button
-                          disabled={isMatchLocked}
-                          onClick={() => handlePredictDraft(match.id, "DRAW")}
-                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            currentPrediction === "DRAW"
-                              ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isMatchLocked
-                              ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                              : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                          }`}
-                        >
-                          Draw
-                        </button>
-                        <button
-                          disabled={isMatchLocked}
-                          onClick={() => handlePredictDraft(match.id, "AWAY")}
-                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            currentPrediction === "AWAY"
-                              ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isMatchLocked
-                              ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                              : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                          }`}
-                        >
-                          {match.awayTeam}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Admin Panel Score Setter */}
-                    {user.username.toLowerCase() === "admin" && (
-                      <div className="mt-3 pt-3 border-t border-zinc-850 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-zinc-950/40 p-3 rounded-lg border border-amber-500/10">
-                        <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                          <Settings className="h-3 w-3" />
-                          <span>Admin Control</span>
-                        </span>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <input
-                            type="number"
-                            placeholder="Home"
-                            defaultValue={match.homeScore ?? ""}
-                            id={`admin-home-${match.id}`}
-                            className="w-12 px-1.5 py-1 text-center bg-zinc-900 border border-zinc-800 rounded text-xs text-white placeholder-zinc-750 focus:outline-hidden focus:border-amber-500"
-                          />
-                          <span className="text-zinc-600">-</span>
-                          <input
-                            type="number"
-                            placeholder="Away"
-                            defaultValue={match.awayScore ?? ""}
-                            id={`admin-away-${match.id}`}
-                            className="w-12 px-1.5 py-1 text-center bg-zinc-900 border border-zinc-800 rounded text-xs text-white placeholder-zinc-750 focus:outline-hidden focus:border-amber-500"
-                          />
+                        <div className="grid grid-cols-3 gap-2">
                           <button
-                            onClick={async () => {
-                              const homeVal = (document.getElementById(`admin-home-${match.id}`) as HTMLInputElement)?.value;
-                              const awayVal = (document.getElementById(`admin-away-${match.id}`) as HTMLInputElement)?.value;
-                              if (homeVal === "" || awayVal === "") return;
-                              await handleAdminUpdateScore(match.id, parseInt(homeVal), parseInt(awayVal));
-                            }}
-                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded transition-all cursor-pointer w-full sm:w-auto"
+                            disabled={isMatchLocked}
+                            onClick={() => handlePredictDraft(match.id, "HOME")}
+                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              currentPrediction === "HOME"
+                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
+                                : isMatchLocked
+                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
                           >
-                            Set Result
+                            {match.homeTeam}
+                          </button>
+                          <button
+                            disabled={isMatchLocked}
+                            onClick={() => handlePredictDraft(match.id, "DRAW")}
+                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              currentPrediction === "DRAW"
+                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
+                                : isMatchLocked
+                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            Draw
+                          </button>
+                          <button
+                            disabled={isMatchLocked}
+                            onClick={() => handlePredictDraft(match.id, "AWAY")}
+                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              currentPrediction === "AWAY"
+                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
+                                : isMatchLocked
+                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            {match.awayTeam}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin Panel Winner Selector */}
+                    {user.isAdmin && (
+                      <div className="mt-3 pt-3 border-t border-zinc-850 flex flex-col gap-3 bg-zinc-950/40 p-3 rounded-lg border border-amber-500/10">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                            <Settings className="h-3 w-3" />
+                            <span>Admin Control</span>
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            onClick={() => handleSelectAdminResult(match.id, "HOME")}
+                            className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              draftResults[match.id] === "HOME"
+                                ? "bg-amber-600 border-amber-500 text-white shadow-md shadow-amber-900/30"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            {match.homeTeam} Win
+                          </button>
+                          <button
+                            onClick={() => handleSelectAdminResult(match.id, "DRAW")}
+                            className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              draftResults[match.id] === "DRAW"
+                                ? "bg-amber-600 border-amber-500 text-white shadow-md shadow-amber-900/30"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            Draw
+                          </button>
+                          <button
+                            onClick={() => handleSelectAdminResult(match.id, "AWAY")}
+                            className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              draftResults[match.id] === "AWAY"
+                                ? "bg-amber-600 border-amber-500 text-white shadow-md shadow-amber-900/30"
+                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            }`}
+                          >
+                            {match.awayTeam} Win
                           </button>
                         </div>
                       </div>

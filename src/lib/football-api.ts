@@ -77,6 +77,12 @@ export async function syncMatches(): Promise<SyncResult> {
 
       // Grade predictions for this match if it is finished
       if (status === "FINISHED" && winner) {
+        await prisma.result.upsert({
+          where: { matchId: dbMatch.id },
+          update: { winner },
+          create: { matchId: dbMatch.id, winner },
+        });
+
         const predictions = await prisma.prediction.findMany({
           where: { matchId: dbMatch.id },
         });
