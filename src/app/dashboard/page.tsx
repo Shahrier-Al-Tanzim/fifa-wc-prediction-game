@@ -361,14 +361,16 @@ export default function DashboardPage() {
             <p className="text-zinc-400 text-sm mt-1">Get ready to predict daily matches and compete with your friends.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-             <button
-              onClick={handleSyncMatches}
-              disabled={syncing}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50 cursor-pointer"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin text-emerald-400" : "text-zinc-400"}`} />
-              {syncing ? "Syncing..." : "Sync Fixtures"}
-            </button>
+            {user.isAdmin && (
+              <button
+                onClick={handleSyncMatches}
+                disabled={syncing}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin text-emerald-400" : "text-zinc-400"}`} />
+                {syncing ? "Syncing..." : "Sync Fixtures"}
+              </button>
+            )}
             {user.isAdmin && (
               <button
                 onClick={handleSyncPoints}
