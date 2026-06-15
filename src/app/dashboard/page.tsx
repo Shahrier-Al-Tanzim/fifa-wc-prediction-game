@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trophy, LogOut, Calendar, Star, Users, Check, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { Trophy, LogOut, Calendar, Star, Users, Check, Clock, AlertCircle, RefreshCw, Lock, Unlock, Settings } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -23,18 +23,68 @@ interface Match {
   userPrediction: "HOME" | "AWAY" | "DRAW" | null;
 }
 
+interface LeaderboardUser {
+  id: string;
+  username: string;
+  points: number;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isMock, setIsMock] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [draftPredictions, setDraftPredictions] = useState<Record<string, "HOME" | "AWAY" | "DRAW">>({});
+  const [lockedDates, setLockedDates] = useState<string[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [activeTab, setActiveTab] = useState<"predictions" | "leaderboard">("predictions");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ source: "api" | "mock"; updatedCount: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ updatedCount: number } | null>(null);
+  const [lockingDay, setLockingDay] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      const userRes = await fetch("/api/auth/me");
+      const userData = await userRes.json();
+      if (!userRes.ok || !userData.user) {
+        router.push("/login");
+        return;
+      }
+      setUser(userData.user);
+
+      const matchesRes = await fetch("/api/matches", {
+        headers: { "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone },
+      });
+      const matchesData = await matchesRes.json();
+      if (matchesRes.ok) {
+        const fetchedMatches: Match[] = matchesData.matches || [];
+        setMatches(fetchedMatches);
+        setLockedDates(matchesData.lockedDates || []);
+
+        // Load existing predictions into draft memory
+        const drafts: Record<string, "HOME" | "AWAY" | "DRAW"> = {};
+        fetchedMatches.forEach((m) => {
+          if (m.userPrediction) {
+            drafts[m.id] = m.userPrediction;
+          }
+        });
+        setDraftPredictions(drafts);
+      }
+
+      const leaderboardRes = await fetch("/api/leaderboard");
+      const leaderboardData = await leaderboardRes.json();
+      if (leaderboardRes.ok) {
+        setLeaderboard(leaderboardData.leaderboard || []);
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard data:", err);
+      router.push("/login");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSyncMatches = async () => {
     setSyncing(true);
@@ -48,46 +98,14 @@ export default function DashboardPage() {
       if (!res.ok) {
         throw new Error(data.error || "Sync failed");
       }
-      setSyncResult({ source: data.source, updatedCount: data.updatedCount });
-      // Fetch matches again to display updated matches
-      const matchesRes = await fetch("/api/matches");
-      const matchesData = await matchesRes.json();
-      if (matchesRes.ok) {
-        setMatches(matchesData.matches || []);
-      }
-      // Auto clear sync result notification after 5 seconds
+      setSyncResult({ updatedCount: data.updatedCount });
+      await fetchData();
       setTimeout(() => setSyncResult(null), 5000);
     } catch (err: any) {
       setSubmitError(err.message);
       setTimeout(() => setSubmitError(null), 3000);
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const fetchData = async () => {
-    try {
-      // Fetch User Status
-      const userRes = await fetch("/api/auth/me");
-      const userData = await userRes.json();
-      if (!userRes.ok || !userData.user) {
-        router.push("/login");
-        return;
-      }
-      setUser(userData.user);
-      setIsMock(userData.isMock || false);
-
-      // Fetch Matches & User Predictions
-      const matchesRes = await fetch("/api/matches");
-      const matchesData = await matchesRes.json();
-      if (matchesRes.ok) {
-        setMatches(matchesData.matches || []);
-      }
-    } catch (err) {
-      console.error("Failed to load dashboard data:", err);
-      router.push("/login");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -110,7 +128,6 @@ export default function DashboardPage() {
       ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
       if (!selectedDate) {
-        // Find the first date with upcoming matches (or first overall date)
         const now = new Date();
         const firstUpcomingMatch = matches.find((m) => new Date(m.matchDate) > now);
         if (firstUpcomingMatch) {
@@ -137,33 +154,87 @@ export default function DashboardPage() {
     }
   };
 
-  const handlePredict = async (matchId: string, selection: "HOME" | "AWAY" | "DRAW") => {
-    setSubmittingId(matchId);
+  const handlePredictDraft = (matchId: string, selection: "HOME" | "AWAY" | "DRAW") => {
+    if (!selectedDate) return;
+
+    const parts = selectedDate.split("/");
+    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
+
+    if (lockedDates.includes(formattedDate)) {
+      setSubmitError("Predictions for this day are locked and cannot be changed.");
+      setTimeout(() => setSubmitError(null), 3000);
+      return;
+    }
+
+    setDraftPredictions((prev) => ({
+      ...prev,
+      [matchId]: selection,
+    }));
+  };
+
+  const handleLockDay = async () => {
+    if (!selectedDate) return;
+    setLockingDay(true);
     setSubmitError(null);
 
+    const parts = selectedDate.split("/");
+    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
+
+    const dayMatches = matches.filter((m) => {
+      const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      return mDate === selectedDate;
+    });
+
+    const predictionsPayload = dayMatches.map((m) => ({
+      matchId: m.id,
+      predictedWinner: draftPredictions[m.id],
+    }));
+
     try {
-      const res = await fetch("/api/predictions", {
+      const res = await fetch("/api/predictions/lock-day", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId, predictedWinner: selection }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        body: JSON.stringify({ dateStr: formattedDate, predictions: predictionsPayload }),
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || "Submission failed");
+        throw new Error(data.error || "Locking predictions failed");
       }
 
-      // Update local matches state
-      setMatches((prev) =>
-        prev.map((m) => (m.id === matchId ? { ...m, userPrediction: selection } : m))
-      );
+      setLockedDates((prev) => [...prev, formattedDate]);
+      await fetchData();
     } catch (err: any) {
       setSubmitError(err.message);
-      // Automatically clear error after 3 seconds
       setTimeout(() => setSubmitError(null), 3000);
     } finally {
-      setSubmittingId(null);
+      setLockingDay(false);
+    }
+  };
+
+  const handleAdminUpdateScore = async (matchId: string, homeScore: number, awayScore: number) => {
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/admin/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId, homeScore, awayScore }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update match score");
+      }
+      await fetchData();
+    } catch (err: any) {
+      setSubmitError(err.message);
+      setTimeout(() => setSubmitError(null), 3000);
     }
   };
 
@@ -177,7 +248,6 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  // Get unique dates and filter matches by selected date
   const now = new Date();
   const uniqueDates = Array.from(
     new Set(
@@ -199,6 +269,17 @@ export default function DashboardPage() {
     });
     return mDate === selectedDate;
   });
+
+  const selectedDateFormatted = selectedDate
+    ? (() => {
+        const parts = selectedDate.split("/");
+        return `${parts[2]}-${parts[0]}-${parts[1]}`;
+      })()
+    : null;
+  const isSelectedDateLocked = selectedDateFormatted ? lockedDates.includes(selectedDateFormatted) : false;
+
+  // Validation: User must select predictions for all matches on the selected day to enable Save
+  const allMatchesPredicted = filteredMatches.every((m) => draftPredictions[m.id] !== undefined);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans">
@@ -228,19 +309,9 @@ export default function DashboardPage() {
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-8 flex flex-col gap-6">
-        {/* Warning Indicator */}
-        {isMock && (
-          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-300 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center gap-2">
-            <span>⚠️</span>
-            <span>
-              <strong>Mock Data Active:</strong> `FOOTBALL_API_KEY` is not set. Simulating World Cup match schedules and updates.
-            </span>
-          </div>
-        )}
-
         {/* Global Error Banner */}
         {submitError && (
-          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center gap-2 animate-bounce">
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{submitError}</span>
           </div>
@@ -251,7 +322,7 @@ export default function DashboardPage() {
           <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center gap-2">
             <Check className="h-4 w-4 text-emerald-400" />
             <span>
-              <strong>Sync Complete:</strong> Fetched fixtures from <strong>{syncResult.source.toUpperCase()}</strong>. {syncResult.updatedCount} fixtures processed.
+              <strong>Sync Complete:</strong> Processed {syncResult.updatedCount} fixtures.
             </span>
           </div>
         )}
@@ -313,7 +384,10 @@ export default function DashboardPage() {
                     const weekday = dateObj.toLocaleDateString("en-US", { weekday: "short" });
                     const dayMonth = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                     
-                    // count how many matches on this date are finished vs total
+                    const parts = dateStr.split("/");
+                    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
+                    const isLocked = lockedDates.includes(formattedDate);
+
                     const matchesOnDate = matches.filter(m => {
                       const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
                         year: "numeric",
@@ -329,12 +403,17 @@ export default function DashboardPage() {
                       <button
                         key={dateStr}
                         onClick={() => setSelectedDate(dateStr)}
-                        className={`flex flex-col items-center min-w-[90px] p-2.5 rounded-xl border transition-all cursor-pointer ${
+                        className={`flex flex-col items-center min-w-[95px] p-2.5 rounded-xl border transition-all cursor-pointer relative ${
                           isSelected
                             ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-900/30 scale-105"
                             : "bg-zinc-900 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         }`}
                       >
+                        {isLocked && (
+                          <span className="absolute top-1 right-1.5 text-[10px] text-amber-400">
+                            🔒
+                          </span>
+                        )}
                         <span className={`text-[10px] uppercase font-semibold ${isSelected ? "text-emerald-100" : "text-zinc-500"}`}>
                           {weekday}
                         </span>
@@ -350,6 +429,49 @@ export default function DashboardPage() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Lock Day Section */}
+            {uniqueDates.length > 0 && selectedDate && (
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-900/40 border border-zinc-850 p-4 rounded-xl gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    {isSelectedDateLocked ? (
+                      <>
+                        <Lock className="h-4 w-4 text-amber-400" />
+                        <span>Day Predictions Saved & Locked</span>
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="h-4 w-4 text-emerald-400" />
+                        <span>Predictions Open {!allMatchesPredicted && <span className="text-xs text-rose-400 italic font-normal">(All matches must be predicted first)</span>}</span>
+                      </>
+                    )}
+                  </h4>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {isSelectedDateLocked
+                      ? "Predictions for this day have been permanently saved. They can no longer be edited."
+                      : "Fill in predictions for all matches on this day, then click save to permanently lock them."}
+                  </p>
+                </div>
+
+                {!isSelectedDateLocked && filteredMatches.length > 0 && (
+                  <button
+                    onClick={handleLockDay}
+                    disabled={lockingDay || !allMatchesPredicted}
+                    className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-950/20 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {lockingDay ? (
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    ) : (
+                      <>
+                        <Lock className="h-3.5 w-3.5" />
+                        <span>Save & Lock Predictions</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             )}
 
@@ -369,6 +491,10 @@ export default function DashboardPage() {
                 // Check grading result status
                 const isGraded = match.winner !== null;
                 const isPredictionCorrect = isGraded && match.userPrediction === match.winner;
+                
+                // Disable predictions if day is locked
+                const isMatchLocked = isKickoffPassed || isSelectedDateLocked;
+                const currentPrediction = draftPredictions[match.id] || null;
 
                 return (
                   <div
@@ -381,9 +507,10 @@ export default function DashboardPage() {
                         <Clock className="h-3.5 w-3.5 text-zinc-500" />
                         {matchDate} • {matchTime}
                       </span>
-                      {isKickoffPassed ? (
-                        <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-semibold uppercase">
-                          {match.status === "FINISHED" ? "Finished" : "Live"}
+                      {isMatchLocked ? (
+                        <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-semibold uppercase flex items-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          {match.status === "FINISHED" ? "Finished" : "Locked"}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold uppercase">
@@ -423,12 +550,12 @@ export default function DashboardPage() {
 
                       <div className="grid grid-cols-3 gap-2">
                         <button
-                          disabled={isKickoffPassed || submittingId === match.id}
-                          onClick={() => handlePredict(match.id, "HOME")}
+                          disabled={isMatchLocked}
+                          onClick={() => handlePredictDraft(match.id, "HOME")}
                           className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            match.userPrediction === "HOME"
+                            currentPrediction === "HOME"
                               ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isKickoffPassed
+                              : isMatchLocked
                               ? "bg-zinc-950 border-zinc-900 text-zinc-600"
                               : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
                           }`}
@@ -436,12 +563,12 @@ export default function DashboardPage() {
                           {match.homeTeam}
                         </button>
                         <button
-                          disabled={isKickoffPassed || submittingId === match.id}
-                          onClick={() => handlePredict(match.id, "DRAW")}
+                          disabled={isMatchLocked}
+                          onClick={() => handlePredictDraft(match.id, "DRAW")}
                           className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            match.userPrediction === "DRAW"
+                            currentPrediction === "DRAW"
                               ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isKickoffPassed
+                              : isMatchLocked
                               ? "bg-zinc-950 border-zinc-900 text-zinc-600"
                               : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
                           }`}
@@ -449,12 +576,12 @@ export default function DashboardPage() {
                           Draw
                         </button>
                         <button
-                          disabled={isKickoffPassed || submittingId === match.id}
-                          onClick={() => handlePredict(match.id, "AWAY")}
+                          disabled={isMatchLocked}
+                          onClick={() => handlePredictDraft(match.id, "AWAY")}
                           className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            match.userPrediction === "AWAY"
+                            currentPrediction === "AWAY"
                               ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                              : isKickoffPassed
+                              : isMatchLocked
                               ? "bg-zinc-950 border-zinc-900 text-zinc-600"
                               : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
                           }`}
@@ -463,6 +590,44 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Admin Panel Score Setter */}
+                    {user.username.toLowerCase() === "admin" && (
+                      <div className="mt-3 pt-3 border-t border-zinc-850 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-zinc-950/40 p-3 rounded-lg border border-amber-500/10">
+                        <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Settings className="h-3 w-3" />
+                          <span>Admin Control</span>
+                        </span>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <input
+                            type="number"
+                            placeholder="Home"
+                            defaultValue={match.homeScore ?? ""}
+                            id={`admin-home-${match.id}`}
+                            className="w-12 px-1.5 py-1 text-center bg-zinc-900 border border-zinc-800 rounded text-xs text-white placeholder-zinc-750 focus:outline-hidden focus:border-amber-500"
+                          />
+                          <span className="text-zinc-600">-</span>
+                          <input
+                            type="number"
+                            placeholder="Away"
+                            defaultValue={match.awayScore ?? ""}
+                            id={`admin-away-${match.id}`}
+                            className="w-12 px-1.5 py-1 text-center bg-zinc-900 border border-zinc-800 rounded text-xs text-white placeholder-zinc-750 focus:outline-hidden focus:border-amber-500"
+                          />
+                          <button
+                            onClick={async () => {
+                              const homeVal = (document.getElementById(`admin-home-${match.id}`) as HTMLInputElement)?.value;
+                              const awayVal = (document.getElementById(`admin-away-${match.id}`) as HTMLInputElement)?.value;
+                              if (homeVal === "" || awayVal === "") return;
+                              await handleAdminUpdateScore(match.id, parseInt(homeVal), parseInt(awayVal));
+                            }}
+                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded transition-all cursor-pointer w-full sm:w-auto"
+                          >
+                            Set Result
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Result and Scoring Banner */}
                     {isKickoffPassed && (
@@ -519,28 +684,51 @@ export default function DashboardPage() {
               <span className="text-xs text-zinc-500">Updated automatically</span>
             </div>
 
-            {/* Mock Leaderboard */}
+            {/* Dynamic Leaderboard */}
             <div className="divide-y divide-zinc-800">
               <div className="flex items-center justify-between py-3 font-semibold text-xs text-zinc-400">
                 <span>Rank & Player</span>
                 <span>Points</span>
               </div>
 
-              <div className="flex items-center justify-between py-4 text-sm">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-emerald-400 w-5">#1</span>
-                  <span className="text-white font-medium">{user.username} (You)</span>
-                </div>
-                <span className="font-semibold text-white">{user.points} pts</span>
-              </div>
+              {leaderboard.map((item, index) => {
+                const isCurrentUser = item.id === user.id;
+                
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-center justify-between py-4 text-sm transition-all ${
+                      isCurrentUser ? "bg-emerald-500/5 px-2 -mx-2 rounded-lg" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`font-bold w-5 ${
+                        index === 0
+                          ? "text-amber-400"
+                          : index === 1
+                          ? "text-zinc-300"
+                          : index === 2
+                          ? "text-amber-600"
+                          : "text-zinc-500"
+                      }`}>
+                        #{index + 1}
+                      </span>
+                      <span className={`${isCurrentUser ? "text-emerald-400 font-bold" : "text-white font-medium"}`}>
+                        {item.username} {isCurrentUser && <span className="text-xs text-zinc-500 font-normal">(You)</span>}
+                      </span>
+                    </div>
+                    <span className={`font-bold ${isCurrentUser ? "text-emerald-400" : "text-white"}`}>
+                      {item.points} pts
+                    </span>
+                  </div>
+                );
+              })}
 
-              <div className="flex items-center justify-between py-4 text-sm opacity-50">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-zinc-500 w-5">#2</span>
-                  <span className="text-zinc-300">PredictorPro</span>
+              {leaderboard.length === 0 && (
+                <div className="py-8 text-center text-zinc-500 text-sm">
+                  No players found in this league.
                 </div>
-                <span className="font-semibold text-zinc-300">0 pts</span>
-              </div>
+              )}
             </div>
           </div>
         )}

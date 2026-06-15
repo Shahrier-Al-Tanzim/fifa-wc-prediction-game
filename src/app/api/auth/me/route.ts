@@ -20,7 +20,6 @@ export async function GET() {
 
     return NextResponse.json({
       user,
-      isMock: !process.env.FOOTBALL_API_KEY,
     });
   } catch (error) {
     console.error("Auth status error:", error);

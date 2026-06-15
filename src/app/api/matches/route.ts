@@ -21,7 +21,10 @@ export async function GET() {
 
     // If not authenticated, return matches without user predictions
     if (!session) {
-      return NextResponse.json({ matches: matches.map(m => ({ ...m, userPrediction: null })) });
+      return NextResponse.json({
+        matches: matches.map(m => ({ ...m, userPrediction: null })),
+        lockedDates: [],
+      });
     }
 
     // Fetch user predictions
@@ -37,7 +40,17 @@ export async function GET() {
       userPrediction: predictionMap.get(match.id) || null,
     }));
 
-    return NextResponse.json({ matches: matchesWithPredictions });
+    // Fetch user day locks
+    const dayLocks = await prisma.dayLock.findMany({
+      where: { userId: session.id },
+      select: { dateStr: true },
+    });
+    const lockedDates = dayLocks.map((d) => d.dateStr);
+
+    return NextResponse.json({
+      matches: matchesWithPredictions,
+      lockedDates,
+    });
   } catch (error: any) {
     console.error("Failed to fetch matches:", error);
     return NextResponse.json(

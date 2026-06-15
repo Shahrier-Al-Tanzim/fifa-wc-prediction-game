@@ -36,6 +36,27 @@ export async function POST(req: Request) {
       );
     }
 
+    // Day lock validation: check if the user has locked predictions for this day
+    const { getLocalDateStr } = await import("@/lib/date-utils");
+    const timeZone = req.headers.get("x-timezone") || "UTC";
+    const dateStr = getLocalDateStr(match.matchDate, timeZone);
+
+    const isLocked = await prisma.dayLock.findUnique({
+      where: {
+        userId_dateStr: {
+          userId: session.id,
+          dateStr,
+        },
+      },
+    });
+
+    if (isLocked) {
+      return NextResponse.json(
+        { error: "Predictions for this day have already been saved and locked" },
+        { status: 400 }
+      );
+    }
+
     // Upsert user prediction
     const prediction = await prisma.prediction.upsert({
       where: {
