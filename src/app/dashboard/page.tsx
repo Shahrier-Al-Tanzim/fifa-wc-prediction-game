@@ -21,12 +21,20 @@ interface Match {
   matchDate: string;
   winner: "HOME" | "AWAY" | "DRAW" | null;
   userPrediction: "HOME" | "AWAY" | "DRAW" | null;
+  otherPredictions?: { username: string; prediction: "HOME" | "AWAY" | "DRAW" }[];
 }
 
 interface LeaderboardUser {
   id: string;
   username: string;
   points: number;
+}
+
+function formatLocalDate(dateObj: Date): string {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function DashboardPage() {
@@ -36,7 +44,7 @@ export default function DashboardPage() {
   const [draftPredictions, setDraftPredictions] = useState<Record<string, "HOME" | "AWAY" | "DRAW">>({});
   const [lockedDates, setLockedDates] = useState<string[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [activeTab, setActiveTab] = useState<"predictions" | "leaderboard">("predictions");
+  const [activeTab, setActiveTab] = useState<"predictions" | "users-predictions" | "leaderboard">("predictions");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -117,25 +125,15 @@ export default function DashboardPage() {
     if (matches.length > 0) {
       const dates = Array.from(
         new Set(
-          matches.map((m) =>
-            new Date(m.matchDate).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-            })
-          )
+          matches.map((m) => formatLocalDate(new Date(m.matchDate)))
         )
-      ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+      ).sort();
 
       if (!selectedDate) {
         const now = new Date();
         const firstUpcomingMatch = matches.find((m) => new Date(m.matchDate) > now);
         if (firstUpcomingMatch) {
-          const upcomingDateStr = new Date(firstUpcomingMatch.matchDate).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          });
+          const upcomingDateStr = formatLocalDate(new Date(firstUpcomingMatch.matchDate));
           setSelectedDate(upcomingDateStr);
         } else if (dates.length > 0) {
           setSelectedDate(dates[0]);
@@ -157,10 +155,7 @@ export default function DashboardPage() {
   const handlePredictDraft = (matchId: string, selection: "HOME" | "AWAY" | "DRAW") => {
     if (!selectedDate) return;
 
-    const parts = selectedDate.split("/");
-    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-
-    if (lockedDates.includes(formattedDate)) {
+    if (lockedDates.includes(selectedDate)) {
       setSubmitError("Predictions for this day are locked and cannot be changed.");
       setTimeout(() => setSubmitError(null), 3000);
       return;
@@ -177,17 +172,7 @@ export default function DashboardPage() {
     setLockingDay(true);
     setSubmitError(null);
 
-    const parts = selectedDate.split("/");
-    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-
-    const dayMatches = matches.filter((m) => {
-      const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-      return mDate === selectedDate;
-    });
+    const dayMatches = matches.filter((m) => formatLocalDate(new Date(m.matchDate)) === selectedDate);
 
     const predictionsPayload = dayMatches.map((m) => ({
       matchId: m.id,
@@ -201,7 +186,7 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
-        body: JSON.stringify({ dateStr: formattedDate, predictions: predictionsPayload }),
+        body: JSON.stringify({ dateStr: selectedDate, predictions: predictionsPayload }),
       });
 
       const data = await res.json();
@@ -209,7 +194,7 @@ export default function DashboardPage() {
         throw new Error(data.error || "Locking predictions failed");
       }
 
-      setLockedDates((prev) => [...prev, formattedDate]);
+      setLockedDates((prev) => [...prev, selectedDate]);
       await fetchData();
     } catch (err: any) {
       setSubmitError(err.message);
@@ -251,32 +236,14 @@ export default function DashboardPage() {
   const now = new Date();
   const uniqueDates = Array.from(
     new Set(
-      matches.map((m) =>
-        new Date(m.matchDate).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        })
-      )
+      matches.map((m) => formatLocalDate(new Date(m.matchDate)))
     )
-  ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  ).sort();
 
-  const filteredMatches = matches.filter((m) => {
-    const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    return mDate === selectedDate;
-  });
+  const filteredMatches = matches.filter((m) => formatLocalDate(new Date(m.matchDate)) === selectedDate);
 
-  const selectedDateFormatted = selectedDate
-    ? (() => {
-        const parts = selectedDate.split("/");
-        return `${parts[2]}-${parts[0]}-${parts[1]}`;
-      })()
-    : null;
-  const isSelectedDateLocked = selectedDateFormatted ? lockedDates.includes(selectedDateFormatted) : false;
+  const selectedDateFormatted = selectedDate;
+  const isSelectedDateLocked = selectedDate ? lockedDates.includes(selectedDate) : false;
 
   // Validation: User must select predictions for all matches on the selected day to enable Save
   const allMatchesPredicted = filteredMatches.every((m) => draftPredictions[m.id] !== undefined);
@@ -354,6 +321,17 @@ export default function DashboardPage() {
               Predictions
             </button>
             <button
+              onClick={() => setActiveTab("users-predictions")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                activeTab === "users-predictions"
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30"
+                  : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              User's Predictions
+            </button>
+            <button
               onClick={() => setActiveTab("leaderboard")}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                 activeTab === "leaderboard"
@@ -361,7 +339,7 @@ export default function DashboardPage() {
                   : "bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
               }`}
             >
-              <Users className="h-4 w-4" />
+              <Trophy className="h-4 w-4" />
               Leaderboard
             </button>
           </div>
@@ -379,23 +357,14 @@ export default function DashboardPage() {
                 </label>
                 <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
                   {uniqueDates.map((dateStr) => {
-                    const dateObj = new Date(dateStr);
+                    const dateObj = new Date(dateStr + "T00:00:00");
                     const isSelected = selectedDate === dateStr;
                     const weekday = dateObj.toLocaleDateString("en-US", { weekday: "short" });
                     const dayMonth = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                     
-                    const parts = dateStr.split("/");
-                    const formattedDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
-                    const isLocked = lockedDates.includes(formattedDate);
+                    const isLocked = lockedDates.includes(dateStr);
 
-                    const matchesOnDate = matches.filter(m => {
-                      const mDate = new Date(m.matchDate).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                      });
-                      return mDate === dateStr;
-                    });
+                    const matchesOnDate = matches.filter(m => formatLocalDate(new Date(m.matchDate)) === dateStr);
                     const finishedCount = matchesOnDate.filter(m => m.status === "FINISHED").length;
                     const totalCount = matchesOnDate.length;
 
@@ -662,12 +631,156 @@ export default function DashboardPage() {
                         )}
                       </div>
                     )}
+
+                    {/* Other Users' Predictions */}
+                    {match.otherPredictions && match.otherPredictions.length > 0 && (
+                      <div className="mt-2 pt-2.5 border-t border-zinc-850 flex flex-col gap-1.5">
+                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                          Community Predictions
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {match.otherPredictions.map((pred, idx) => (
+                            <div
+                              key={idx}
+                              className="text-[11px] px-2 py-1 rounded-md bg-zinc-950/60 border border-zinc-850 text-zinc-300 flex items-center gap-1"
+                            >
+                              <span className="font-semibold text-zinc-400">{pred.username}:</span>
+                              <span className="text-emerald-400 font-bold">
+                                {pred.prediction === "HOME"
+                                  ? match.homeTeam
+                                  : pred.prediction === "AWAY"
+                                  ? match.awayTeam
+                                  : "Draw"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
             {/* Empty state */}
+            {filteredMatches.length === 0 && (
+              <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-12 text-center text-zinc-500 text-sm">
+                No fixtures scheduled for this date.
+              </div>
+            )}
+          </div>
+        ) : activeTab === "users-predictions" ? (
+          <div className="space-y-6">
+            {/* Date Picker Bar */}
+            {uniqueDates.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-emerald-400" />
+                  Select Tournament Date
+                </label>
+                <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                  {uniqueDates.map((dateStr) => {
+                    const dateObj = new Date(dateStr + "T00:00:00");
+                    const isSelected = selectedDate === dateStr;
+                    const weekday = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+                    const dayMonth = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    
+                    const isLocked = lockedDates.includes(dateStr);
+
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => setSelectedDate(dateStr)}
+                        className={`flex flex-col items-center min-w-[95px] p-2.5 rounded-xl border transition-all cursor-pointer relative ${
+                          isSelected
+                            ? "bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-900/30 scale-105"
+                            : "bg-zinc-900 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        }`}
+                      >
+                        {isLocked && (
+                          <span className="absolute top-1 right-1.5 text-[10px] text-amber-400">
+                            🔒
+                          </span>
+                        )}
+                        <span className={`text-[10px] uppercase font-semibold ${isSelected ? "text-emerald-100" : "text-zinc-500"}`}>
+                          {weekday}
+                        </span>
+                        <span className="text-sm font-bold mt-0.5 leading-none">
+                          {dayMonth}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Predictions List - Grouped by User */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {leaderboard.map((player) => {
+                const isSelf = player.id === user.id;
+
+                return (
+                  <div
+                    key={player.id}
+                    className="bg-zinc-900/40 border border-zinc-850 p-5 rounded-xl flex flex-col gap-4 hover:border-zinc-850 transition-all"
+                  >
+                    <h4 className={`text-sm font-bold border-b border-zinc-850 pb-2 flex items-center justify-between ${
+                      isSelf ? "text-emerald-400" : "text-white"
+                    }`}>
+                      <span>{player.username}'s Predictions</span>
+                      {isSelf && <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md font-semibold uppercase">You</span>}
+                    </h4>
+
+                    <div className="divide-y divide-zinc-850/60">
+                      {filteredMatches.map((match) => {
+                        const isKickoffPassed = new Date(match.matchDate) <= now;
+                        const isDayLocked = selectedDate ? lockedDates.includes(selectedDate) : false;
+                        const showOthers = isDayLocked || isKickoffPassed;
+
+                        let predictionText = "No Prediction";
+                        
+                        if (isSelf) {
+                          const pred = draftPredictions[match.id];
+                          if (pred === "HOME") predictionText = match.homeTeam;
+                          else if (pred === "AWAY") predictionText = match.awayTeam;
+                          else if (pred === "DRAW") predictionText = "Draw";
+                        } else {
+                          if (showOthers && match.otherPredictions) {
+                            const otherPred = match.otherPredictions.find(p => p.username === player.username);
+                            if (otherPred) {
+                              if (otherPred.prediction === "HOME") predictionText = match.homeTeam;
+                              else if (otherPred.prediction === "AWAY") predictionText = match.awayTeam;
+                              else if (otherPred.prediction === "DRAW") predictionText = "Draw";
+                            }
+                          } else {
+                            predictionText = "🔒 Hidden";
+                          }
+                        }
+
+                        return (
+                          <div key={match.id} className="flex justify-between items-center py-2.5 text-xs">
+                            <span className="text-zinc-400 font-medium max-w-[60%] truncate">
+                              {match.homeTeam} vs {match.awayTeam}
+                            </span>
+                            <span className={`font-bold ${
+                              predictionText === "🔒 Hidden" 
+                                ? "text-amber-400/80" 
+                                : predictionText === "No Prediction"
+                                ? "text-zinc-650"
+                                : "text-emerald-400"
+                            }`}>
+                              {predictionText}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             {filteredMatches.length === 0 && (
               <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-12 text-center text-zinc-500 text-sm">
                 No fixtures scheduled for this date.
