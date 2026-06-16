@@ -148,6 +148,7 @@ function getFlagUrl(countryName: string): string | null {
   return `https://flagcdn.com/w40/${code}.png`;
 }
 
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
