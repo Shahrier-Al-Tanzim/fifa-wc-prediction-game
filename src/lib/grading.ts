@@ -40,8 +40,17 @@ export async function gradePredictions(): Promise<number> {
   }
 
   // 2. Recalculate all users' points from scratch to ensure absolute correctness of the leaderboard
-  const allUsers = await prisma.user.findMany();
+  const allUsers = await prisma.user.findMany({
+    include: {
+      _count: {
+        select: { predictions: true }
+      }
+    }
+  });
   for (const user of allUsers) {
+    // If the user has never made any predictions, preserve their points (e.g. manual seed/starting points)
+    if (user._count.predictions === 0) continue;
+
     const totalPoints = await prisma.prediction.aggregate({
       where: {
         userId: user.id,

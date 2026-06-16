@@ -38,6 +38,117 @@ function formatLocalDate(dateObj: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const countryCodes: Record<string, string> = {
+  "Mexico": "mx",
+  "South Africa": "za",
+  "South Korea": "kr",
+  "Czech Republic": "cz",
+  "Czechia": "cz",
+  "Canada": "ca",
+  "Bosnia and Herzegovina": "ba",
+  "United States": "us",
+  "Paraguay": "py",
+  "Scotland": "gb-sct",
+  "Haiti": "ht",
+  "Australia": "au",
+  "Turkey": "tr",
+  "Türkiye": "tr",
+  "Brazil": "br",
+  "Morocco": "ma",
+  "Qatar": "qa",
+  "Switzerland": "ch",
+  "Spain": "es",
+  "Cameroon": "cm",
+  "Croatia": "hr",
+  "Japan": "jp",
+  "Italy": "it",
+  "New Zealand": "nz",
+  "Colombia": "co",
+  "Angola": "ao",
+  "Argentina": "ar",
+  "Algeria": "dz",
+  "France": "fr",
+  "Senegal": "sn",
+  "Iraq": "iq",
+  "Norway": "no",
+  "Austria": "at",
+  "Jordan": "jo",
+  "Portugal": "pt",
+  "DR Congo": "cd",
+  "Congo DR": "cd",
+  "Sweden": "se",
+  "Uruguay": "uy",
+  "Germany": "de",
+  "Uzbekistan": "uz",
+  "Netherlands": "nl",
+  "Ecuador": "ec",
+  "Iran": "ir",
+  "IR Iran": "ir",
+  "Chile": "cl",
+  "Panama": "pa",
+  "Jamaica": "jm",
+  "Tunisia": "tn",
+  "Saudi Arabia": "sa",
+  "Denmark": "dk",
+  "Peru": "pe",
+  "Poland": "pl",
+  "Belgium": "be",
+  "Oman": "om",
+  "England": "gb-eng",
+  "Nigeria": "ng",
+  "Wales": "gb-wls",
+  "Ukraine": "ua",
+  "Ghana": "gh",
+  "Slovakia": "sk",
+  "Costa Rica": "cr",
+  "Honduras": "hn",
+  "Egypt": "eg",
+  "Mali": "ml",
+  "Venezuela": "ve",
+  "Bolivia": "bo",
+  "Northern Ireland": "gb-nir",
+  "Republic of Ireland": "ie",
+  "Ireland": "ie",
+  "Greece": "gr",
+  "China PR": "cn",
+  "China": "cn",
+  "Iceland": "is",
+  "Finland": "fi",
+  "Georgia": "ge",
+  "Slovenia": "si",
+  "Albania": "al",
+  "Romania": "ro",
+  "Hungary": "hu",
+  "Serbia": "rs",
+  "Korea Republic": "kr",
+  "Korea DPR": "kp",
+  "North Korea": "kp",
+  "Ivory Coast": "ci",
+  "Côte d'Ivoire": "ci",
+  "Cote d'Ivoire": "ci",
+  "Zambia": "zm",
+  "South Sudan": "ss",
+  "El Salvador": "sv",
+  "Guatemala": "gt",
+  "Trinidad and Tobago": "tt",
+  "Curacao": "cw",
+  "Curaçao": "cw",
+  "Suriname": "sr",
+  "Solomon Islands": "sb",
+  "Fiji": "fj",
+  "New Caledonia": "nc",
+  "Tahiti": "pf",
+  "Vanuatu": "vu",
+  "Papua New Guinea": "pg",
+};
+
+function getFlagUrl(countryName: string): string | null {
+  const code = countryCodes[countryName.trim()];
+  if (!code) return null;
+  return `https://flagcdn.com/w40/${code}.png`;
+}
+
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -285,6 +396,34 @@ export default function DashboardPage() {
       setTimeout(() => setSubmitError(null), 3000);
     } finally {
       setSyncingPoints(false);
+    }
+  };
+
+  const handleUnlockUserPredictions = async (userId: string, username: string) => {
+    if (!selectedDate) return;
+    if (!window.confirm(`Are you sure you want to unlock and clear all predictions for ${username} on ${selectedDate}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/predictions/unlock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        body: JSON.stringify({ userId, dateStr: selectedDate }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to unlock predictions");
+      }
+
+      await fetchData();
+    } catch (err: any) {
+      setSubmitError(err.message);
+      setTimeout(() => setSubmitError(null), 3000);
     }
   };
 
@@ -603,9 +742,18 @@ export default function DashboardPage() {
                     {/* Team Display */}
                     <div className="flex justify-between items-center py-2 px-1">
                       <div className="flex flex-col gap-1 items-start w-5/12">
-                        <span className="text-base font-bold text-white tracking-tight leading-tight">
-                          {match.homeTeam}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {getFlagUrl(match.homeTeam) && (
+                            <img
+                              src={getFlagUrl(match.homeTeam)!}
+                              alt={`${match.homeTeam} flag`}
+                              className="w-6 h-4 object-cover rounded-sm border border-zinc-800 shrink-0"
+                            />
+                          )}
+                          <span className="text-base font-bold text-white tracking-tight leading-tight">
+                            {match.homeTeam}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex flex-col items-center justify-center w-2/12">
                         {match.homeScore !== null && match.awayScore !== null ? (
@@ -617,9 +765,18 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <div className="flex flex-col gap-1 items-end w-5/12 text-right">
-                        <span className="text-base font-bold text-white tracking-tight leading-tight">
-                          {match.awayTeam}
-                        </span>
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="text-base font-bold text-white tracking-tight leading-tight">
+                            {match.awayTeam}
+                          </span>
+                          {getFlagUrl(match.awayTeam) && (
+                            <img
+                              src={getFlagUrl(match.awayTeam)!}
+                              alt={`${match.awayTeam} flag`}
+                              className="w-6 h-4 object-cover rounded-sm border border-zinc-800 shrink-0"
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -630,7 +787,7 @@ export default function DashboardPage() {
                           Predict Winner
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <button
                             disabled={isMatchLocked}
                             onClick={() => handlePredictDraft(match.id, "HOME")}
@@ -643,19 +800,6 @@ export default function DashboardPage() {
                             }`}
                           >
                             {match.homeTeam}
-                          </button>
-                          <button
-                            disabled={isMatchLocked}
-                            onClick={() => handlePredictDraft(match.id, "DRAW")}
-                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                              currentPrediction === "DRAW"
-                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                                : isMatchLocked
-                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                            }`}
-                          >
-                            Draw
                           </button>
                           <button
                             disabled={isMatchLocked}
@@ -719,18 +863,26 @@ export default function DashboardPage() {
                     )}
 
                     {/* Result and Scoring Banner */}
-                    {isKickoffPassed && (
+                    {(isKickoffPassed || isGraded) && (
                       <div className="mt-1 pt-3 border-t border-zinc-850 flex justify-between items-center text-xs">
                         <span className="text-zinc-500 font-medium">
-                          Your choice:{" "}
-                          <span className="text-zinc-300 font-bold">
-                            {match.userPrediction
-                              ? match.userPrediction === "HOME"
-                                ? match.homeTeam
-                                : match.userPrediction === "AWAY"
-                                ? match.awayTeam
-                                : "Draw"
-                              : "None"}
+                          Winner:{" "}
+                          <span className={`font-bold ${
+                            !isGraded
+                              ? "text-zinc-400"
+                              : match.winner === "DRAW"
+                              ? "text-yellow-400"
+                              : isPredictionCorrect
+                              ? "text-emerald-400"
+                              : "text-rose-500"
+                          }`}>
+                            {!isGraded
+                              ? "Pending"
+                              : match.winner === "HOME"
+                              ? match.homeTeam
+                              : match.winner === "AWAY"
+                              ? match.awayTeam
+                              : "Draw"}
                           </span>
                         </span>
 
@@ -740,7 +892,11 @@ export default function DashboardPage() {
                               <Check className="h-3 w-3" /> +1 Pt (Correct)
                             </span>
                           ) : (
-                            <span className="text-rose-400 font-bold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                            <span className={`font-bold px-2 py-0.5 rounded border ${
+                              match.winner === "DRAW" || match.userPrediction === "DRAW"
+                                ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20"
+                                : "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                            }`}>
                               +0 Pts (Incorrect)
                             </span>
                           )
@@ -896,6 +1052,14 @@ export default function DashboardPage() {
                         );
                       })}
                     </div>
+                    {user.isAdmin && (
+                      <button
+                        onClick={() => handleUnlockUserPredictions(player.id, player.username)}
+                        className="w-full text-center py-1.5 px-3 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded-lg text-xs font-semibold cursor-pointer transition-all mt-3"
+                      >
+                        Unlock & Clear Predictions
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -907,6 +1071,7 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          
         ) : (
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-8 flex flex-col gap-6">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
