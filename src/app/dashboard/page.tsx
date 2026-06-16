@@ -658,7 +658,7 @@ export default function DashboardPage() {
                           Predict Winner
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <button
                             disabled={isMatchLocked}
                             onClick={() => handlePredictDraft(match.id, "HOME")}
@@ -671,19 +671,6 @@ export default function DashboardPage() {
                             }`}
                           >
                             {match.homeTeam}
-                          </button>
-                          <button
-                            disabled={isMatchLocked}
-                            onClick={() => handlePredictDraft(match.id, "DRAW")}
-                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                              currentPrediction === "DRAW"
-                                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                                : isMatchLocked
-                                ? "bg-zinc-950 border-zinc-900 text-zinc-600"
-                                : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                            }`}
-                          >
-                            Draw
                           </button>
                           <button
                             disabled={isMatchLocked}
@@ -750,23 +737,23 @@ export default function DashboardPage() {
                     {(isKickoffPassed || isGraded) && (
                       <div className="mt-1 pt-3 border-t border-zinc-850 flex justify-between items-center text-xs">
                         <span className="text-zinc-500 font-medium">
-                          Your choice:{" "}
+                          Winner:{" "}
                           <span className={`font-bold ${
                             !isGraded
-                              ? "text-zinc-300"
-                              : match.userPrediction === "DRAW"
+                              ? "text-zinc-400"
+                              : match.winner === "DRAW"
                               ? "text-yellow-400"
                               : isPredictionCorrect
                               ? "text-emerald-400"
                               : "text-rose-500"
                           }`}>
-                            {match.userPrediction
-                              ? match.userPrediction === "HOME"
-                                ? match.homeTeam
-                                : match.userPrediction === "AWAY"
-                                ? match.awayTeam
-                                : "Draw"
-                              : "None"}
+                            {!isGraded
+                              ? "Pending"
+                              : match.winner === "HOME"
+                              ? match.homeTeam
+                              : match.winner === "AWAY"
+                              ? match.awayTeam
+                              : "Draw"}
                           </span>
                         </span>
 
@@ -955,6 +942,7 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          
         ) : (
           <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-8 flex flex-col gap-6">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">

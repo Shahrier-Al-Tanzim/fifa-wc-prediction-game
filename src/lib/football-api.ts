@@ -105,8 +105,17 @@ export async function syncMatches(): Promise<SyncResult> {
 
   // Recalculate all user points
   try {
-    const users = await prisma.user.findMany();
+    const users = await prisma.user.findMany({
+      include: {
+        _count: {
+          select: { predictions: true }
+        }
+      }
+    });
     for (const user of users) {
+      // If the user has never made any predictions, preserve their points (e.g. manual seed/starting points)
+      if (user._count.predictions === 0) continue;
+
       const totalPoints = await prisma.prediction.aggregate({
         where: { userId: user.id },
         _sum: { pointsAwarded: true },
