@@ -288,6 +288,34 @@ export default function DashboardPage() {
     }
   };
 
+  const handleUnlockUserPredictions = async (userId: string, username: string) => {
+    if (!selectedDate) return;
+    if (!window.confirm(`Are you sure you want to unlock and clear all predictions for ${username} on ${selectedDate}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/predictions/unlock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        body: JSON.stringify({ userId, dateStr: selectedDate }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to unlock predictions");
+      }
+
+      await fetchData();
+    } catch (err: any) {
+      setSubmitError(err.message);
+      setTimeout(() => setSubmitError(null), 3000);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -908,6 +936,14 @@ export default function DashboardPage() {
                         );
                       })}
                     </div>
+                    {user.isAdmin && (
+                      <button
+                        onClick={() => handleUnlockUserPredictions(player.id, player.username)}
+                        className="w-full text-center py-1.5 px-3 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded-lg text-xs font-semibold cursor-pointer transition-all mt-3"
+                      >
+                        Unlock & Clear Predictions
+                      </button>
+                    )}
                   </div>
                 );
               })}
