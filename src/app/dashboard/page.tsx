@@ -719,11 +719,19 @@ export default function DashboardPage() {
                     )}
 
                     {/* Result and Scoring Banner */}
-                    {isKickoffPassed && (
+                    {(isKickoffPassed || isGraded) && (
                       <div className="mt-1 pt-3 border-t border-zinc-850 flex justify-between items-center text-xs">
                         <span className="text-zinc-500 font-medium">
                           Your choice:{" "}
-                          <span className="text-zinc-300 font-bold">
+                          <span className={`font-bold ${
+                            !isGraded
+                              ? "text-zinc-300"
+                              : match.userPrediction === "DRAW"
+                              ? "text-yellow-400"
+                              : isPredictionCorrect
+                              ? "text-emerald-400"
+                              : "text-rose-500"
+                          }`}>
                             {match.userPrediction
                               ? match.userPrediction === "HOME"
                                 ? match.homeTeam
@@ -740,7 +748,11 @@ export default function DashboardPage() {
                               <Check className="h-3 w-3" /> +1 Pt (Correct)
                             </span>
                           ) : (
-                            <span className="text-rose-400 font-bold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                            <span className={`font-bold px-2 py-0.5 rounded border ${
+                              match.winner === "DRAW" || match.userPrediction === "DRAW"
+                                ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20"
+                                : "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                            }`}>
                               +0 Pts (Incorrect)
                             </span>
                           )
