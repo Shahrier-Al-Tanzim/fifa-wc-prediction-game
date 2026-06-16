@@ -1,5 +1,6 @@
 {
   "name": "fifa-wc-prediction-game",
+  "description": "FIFA World Cup Prediction Game",
   "version": "0.1.0",
   "private": true,
   "scripts": {
