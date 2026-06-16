@@ -132,7 +132,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData();
+    const savedTab = localStorage.getItem("dashboard_activeTab");
+    if (savedTab === "predictions" || savedTab === "users-predictions" || savedTab === "leaderboard") {
+      setActiveTab(savedTab);
+    }
   }, [router]);
+
+  useEffect(() => {
+    localStorage.setItem("dashboard_activeTab", activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     if (matches.length > 0) {
@@ -390,7 +398,7 @@ export default function DashboardPage() {
               }`}
             >
               <Calendar className="h-4 w-4" />
-              Predictions
+              Matches
             </button>
             <button
               onClick={() => setActiveTab("users-predictions")}
@@ -401,7 +409,7 @@ export default function DashboardPage() {
               }`}
             >
               <Users className="h-4 w-4" />
-              User's Predictions
+              Predictions
             </button>
             <button
               onClick={() => setActiveTab("leaderboard")}
