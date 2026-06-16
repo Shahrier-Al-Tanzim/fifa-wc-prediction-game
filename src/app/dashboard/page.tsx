@@ -38,6 +38,116 @@ function formatLocalDate(dateObj: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const countryCodes: Record<string, string> = {
+  "Mexico": "mx",
+  "South Africa": "za",
+  "South Korea": "kr",
+  "Czech Republic": "cz",
+  "Czechia": "cz",
+  "Canada": "ca",
+  "Bosnia and Herzegovina": "ba",
+  "United States": "us",
+  "Paraguay": "py",
+  "Scotland": "gb-sct",
+  "Haiti": "ht",
+  "Australia": "au",
+  "Turkey": "tr",
+  "Türkiye": "tr",
+  "Brazil": "br",
+  "Morocco": "ma",
+  "Qatar": "qa",
+  "Switzerland": "ch",
+  "Spain": "es",
+  "Cameroon": "cm",
+  "Croatia": "hr",
+  "Japan": "jp",
+  "Italy": "it",
+  "New Zealand": "nz",
+  "Colombia": "co",
+  "Angola": "ao",
+  "Argentina": "ar",
+  "Algeria": "dz",
+  "France": "fr",
+  "Senegal": "sn",
+  "Iraq": "iq",
+  "Norway": "no",
+  "Austria": "at",
+  "Jordan": "jo",
+  "Portugal": "pt",
+  "DR Congo": "cd",
+  "Congo DR": "cd",
+  "Sweden": "se",
+  "Uruguay": "uy",
+  "Germany": "de",
+  "Uzbekistan": "uz",
+  "Netherlands": "nl",
+  "Ecuador": "ec",
+  "Iran": "ir",
+  "IR Iran": "ir",
+  "Chile": "cl",
+  "Panama": "pa",
+  "Jamaica": "jm",
+  "Tunisia": "tn",
+  "Saudi Arabia": "sa",
+  "Denmark": "dk",
+  "Peru": "pe",
+  "Poland": "pl",
+  "Belgium": "be",
+  "Oman": "om",
+  "England": "gb-eng",
+  "Nigeria": "ng",
+  "Wales": "gb-wls",
+  "Ukraine": "ua",
+  "Ghana": "gh",
+  "Slovakia": "sk",
+  "Costa Rica": "cr",
+  "Honduras": "hn",
+  "Egypt": "eg",
+  "Mali": "ml",
+  "Venezuela": "ve",
+  "Bolivia": "bo",
+  "Northern Ireland": "gb-nir",
+  "Republic of Ireland": "ie",
+  "Ireland": "ie",
+  "Greece": "gr",
+  "China PR": "cn",
+  "China": "cn",
+  "Iceland": "is",
+  "Finland": "fi",
+  "Georgia": "ge",
+  "Slovenia": "si",
+  "Albania": "al",
+  "Romania": "ro",
+  "Hungary": "hu",
+  "Serbia": "rs",
+  "Korea Republic": "kr",
+  "Korea DPR": "kp",
+  "North Korea": "kp",
+  "Ivory Coast": "ci",
+  "Côte d'Ivoire": "ci",
+  "Cote d'Ivoire": "ci",
+  "Zambia": "zm",
+  "South Sudan": "ss",
+  "El Salvador": "sv",
+  "Guatemala": "gt",
+  "Trinidad and Tobago": "tt",
+  "Curacao": "cw",
+  "Curaçao": "cw",
+  "Suriname": "sr",
+  "Solomon Islands": "sb",
+  "Fiji": "fj",
+  "New Caledonia": "nc",
+  "Tahiti": "pf",
+  "Vanuatu": "vu",
+  "Papua New Guinea": "pg",
+};
+
+function getFlagUrl(countryName: string): string | null {
+  const code = countryCodes[countryName.trim()];
+  if (!code) return null;
+  return `https://flagcdn.com/w40/${code}.png`;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -631,9 +741,18 @@ export default function DashboardPage() {
                     {/* Team Display */}
                     <div className="flex justify-between items-center py-2 px-1">
                       <div className="flex flex-col gap-1 items-start w-5/12">
-                        <span className="text-base font-bold text-white tracking-tight leading-tight">
-                          {match.homeTeam}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {getFlagUrl(match.homeTeam) && (
+                            <img
+                              src={getFlagUrl(match.homeTeam)!}
+                              alt={`${match.homeTeam} flag`}
+                              className="w-6 h-4 object-cover rounded-sm border border-zinc-800 shrink-0"
+                            />
+                          )}
+                          <span className="text-base font-bold text-white tracking-tight leading-tight">
+                            {match.homeTeam}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex flex-col items-center justify-center w-2/12">
                         {match.homeScore !== null && match.awayScore !== null ? (
@@ -645,9 +764,18 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <div className="flex flex-col gap-1 items-end w-5/12 text-right">
-                        <span className="text-base font-bold text-white tracking-tight leading-tight">
-                          {match.awayTeam}
-                        </span>
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="text-base font-bold text-white tracking-tight leading-tight">
+                            {match.awayTeam}
+                          </span>
+                          {getFlagUrl(match.awayTeam) && (
+                            <img
+                              src={getFlagUrl(match.awayTeam)!}
+                              alt={`${match.awayTeam} flag`}
+                              className="w-6 h-4 object-cover rounded-sm border border-zinc-800 shrink-0"
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
 
