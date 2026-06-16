@@ -51,7 +51,10 @@ export async function GET(req: Request) {
         const { result, ...matchData } = match;
         return {
           ...matchData,
-          winner: result ? result.winner : matchData.winner,
+          winner: result ? result.winner : null,
+          status: result ? "FINISHED" : "SCHEDULED",
+          homeScore: result ? matchData.homeScore : null,
+          awayScore: result ? matchData.awayScore : null,
           userPrediction: null,
           otherPredictions: isKickoffPassed ? others : [],
         };
@@ -92,7 +95,10 @@ export async function GET(req: Request) {
       const { result, ...matchData } = match;
       return {
         ...matchData,
-        winner: result ? result.winner : matchData.winner,
+        winner: result ? result.winner : null,
+        status: result ? "FINISHED" : "SCHEDULED",
+        homeScore: result ? matchData.homeScore : null,
+        awayScore: result ? matchData.awayScore : null,
         userPrediction: userPred ? userPred.prediction : null,
         otherPredictions,
       };

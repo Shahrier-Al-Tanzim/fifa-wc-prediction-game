@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CopaPredict - World Cup 2026 Prediction League",
+  title: "FIFA Predictor",
   description: "Predict match outcomes, earn points, and dominate the leaderboard with your friends.",
 };
 
