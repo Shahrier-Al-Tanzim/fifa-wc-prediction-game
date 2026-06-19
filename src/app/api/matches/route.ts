@@ -34,10 +34,10 @@ export async function GET(req: Request) {
     });
 
     // Group predictions by matchId
-    const predictionsByMatch = new Map<string, Array<{ username: string; prediction: string }>>();
+    const predictionsByMatch = new Map<string, Array<{ userId: string; username: string; prediction: string }>>();
     allPredictions.forEach((p) => {
       const list = predictionsByMatch.get(p.matchId) || [];
-      list.push({ username: p.user.username, prediction: p.predictedWinner });
+      list.push({ userId: p.userId, username: p.user.username, prediction: p.predictedWinner });
       predictionsByMatch.set(p.matchId, list);
     });
 
@@ -86,11 +86,13 @@ export async function GET(req: Request) {
       const showOthers = isDayLocked || isKickoffPassed;
 
       const otherPredictions = showOthers
-        ? allPredsForMatch.filter((p) => p.username !== session.username)
+        ? allPredsForMatch
+            .filter((p) => p.userId !== session.id)
+            .map((p) => ({ username: p.username, prediction: p.prediction }))
         : [];
 
       // Fetch user's own prediction
-      const userPred = allPredsForMatch.find((p) => p.username === session.username);
+      const userPred = allPredsForMatch.find((p) => p.userId === session.id);
 
       const { result, ...matchData } = match;
       return {
