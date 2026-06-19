@@ -528,6 +528,15 @@ export default function DashboardPage() {
                 {syncingPoints ? "Syncing Points..." : "Sync Points"}
               </button>
             )}
+            {user.isAdmin && (
+              <button
+                onClick={() => router.push("/admin/matches")}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer"
+              >
+                <Settings className="h-4 w-4 text-zinc-400" />
+                Edit Fixtures
+              </button>
+            )}
             <button
               onClick={() => setActiveTab("predictions")}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
@@ -897,7 +906,7 @@ export default function DashboardPage() {
                                 ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20"
                                 : "text-rose-400 bg-rose-500/10 border-rose-500/20"
                             }`}>
-                              +0 Pts (Incorrect)
+                              {match.winner === "DRAW" ? "+0 Pts (Draw)" : "+0 Pts (Incorrect)"}
                             </span>
                           )
                         ) : (
