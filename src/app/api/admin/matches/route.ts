@@ -157,15 +157,8 @@ export async function POST(req: Request) {
     // Save winners using a transaction
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       for (const res of results) {
-        let homeScore = 0;
-        let awayScore = 0;
-        if (res.winner === "HOME") {
-          homeScore = 1;
-          awayScore = 0;
-        } else if (res.winner === "AWAY") {
-          homeScore = 0;
-          awayScore = 1;
-        }
+        const homeScore = typeof res.homeScore === "number" ? res.homeScore : (res.winner === "HOME" ? 1 : 0);
+        const awayScore = typeof res.awayScore === "number" ? res.awayScore : (res.winner === "AWAY" ? 1 : 0);
 
         // Upsert into Result table
         await tx.result.upsert({
