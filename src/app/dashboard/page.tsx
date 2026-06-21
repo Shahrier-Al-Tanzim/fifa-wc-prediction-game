@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trophy, LogOut, Calendar, Star, Users, Check, Clock, AlertCircle, RefreshCw, Lock, Unlock, Settings } from "lucide-react";
+import { Trophy, LogOut, Calendar, Star, Users, Check, Clock, AlertCircle, RefreshCw, Lock, Unlock, Settings, Edit2, X } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -167,6 +167,9 @@ export default function DashboardPage() {
   const [draftScores, setDraftScores] = useState<Record<string, { homeScore: string; awayScore: string }>>({});
   const [savingResults, setSavingResults] = useState(false);
   const [syncingPoints, setSyncingPoints] = useState(false);
+  const [editingPointsUserId, setEditingPointsUserId] = useState<string | null>(null);
+  const [editPointsValue, setEditPointsValue] = useState<string>("");
+  const [savingPointsUserId, setSavingPointsUserId] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -378,6 +381,57 @@ export default function DashboardPage() {
 
       return updatedScores;
     });
+  };
+
+  const handleStartEditPoints = (userId: string, currentPoints: number) => {
+    setEditingPointsUserId(userId);
+    setEditPointsValue(String(currentPoints));
+  };
+
+  const handleCancelEditPoints = () => {
+    setEditingPointsUserId(null);
+    setEditPointsValue("");
+  };
+
+  const handleUpdatePoints = async (targetUserId: string) => {
+    const pointsNum = parseInt(editPointsValue, 10);
+    if (isNaN(pointsNum)) {
+      setSubmitError("Points must be a valid number.");
+      setTimeout(() => setSubmitError(null), 3000);
+      return;
+    }
+
+    setSavingPointsUserId(targetUserId);
+    setSubmitError(null);
+
+    try {
+      const res = await fetch("/api/admin/users/points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: targetUserId, points: pointsNum }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update points");
+      }
+
+      // Update locally
+      setLeaderboard((prev) =>
+        prev.map((item) => (item.id === targetUserId ? { ...item, points: pointsNum } : item))
+      );
+      if (user && user.id === targetUserId) {
+        setUser((prev) => prev ? { ...prev, points: pointsNum } : null);
+      }
+      handleCancelEditPoints();
+    } catch (err: any) {
+      setSubmitError(err.message);
+      setTimeout(() => setSubmitError(null), 3000);
+    } finally {
+      setSavingPointsUserId(null);
+    }
   };
 
   const handleSelectAdminResult = (matchId: string, winner: "HOME" | "AWAY" | "DRAW") => {
@@ -1210,9 +1264,56 @@ export default function DashboardPage() {
                         {item.username} {isCurrentUser && <span className="text-xs text-zinc-500 font-normal">(You)</span>}
                       </span>
                     </div>
-                    <span className={`font-bold ${isCurrentUser ? "text-emerald-400" : "text-white"}`}>
-                      {item.points} pts
-                    </span>
+                    {/* Render score editable for admin */}
+                    {user.isAdmin ? (
+                      editingPointsUserId === item.id ? (
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={editPointsValue}
+                            onChange={(e) => {
+                              if (e.target.value === "" || /^-?\d+$/.test(e.target.value)) {
+                                setEditPointsValue(e.target.value);
+                              }
+                            }}
+                            className="w-16 bg-zinc-950 border border-zinc-800 rounded px-1.5 py-0.5 text-xs text-center focus:border-amber-500 focus:outline-none text-white font-bold"
+                          />
+                          <button
+                            onClick={() => handleUpdatePoints(item.id)}
+                            disabled={savingPointsUserId !== null}
+                            className="p-1 rounded bg-amber-600 hover:bg-amber-500 text-white cursor-pointer transition-all disabled:opacity-50"
+                            title="Save"
+                          >
+                            <Check className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={handleCancelEditPoints}
+                            disabled={savingPointsUserId !== null}
+                            className="p-1 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer transition-all disabled:opacity-50"
+                            title="Cancel"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 group">
+                          <span className={`font-bold ${isCurrentUser ? "text-emerald-400" : "text-white"}`}>
+                            {item.points} pts
+                          </span>
+                          <button
+                            onClick={() => handleStartEditPoints(item.id, item.points)}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-amber-500 transition-all cursor-pointer rounded hover:bg-zinc-850"
+                            title="Modify Points"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )
+                    ) : (
+                      <span className={`font-bold ${isCurrentUser ? "text-emerald-400" : "text-white"}`}>
+                        {item.points} pts
+                      </span>
+                    )}
                   </div>
                 );
               })}
