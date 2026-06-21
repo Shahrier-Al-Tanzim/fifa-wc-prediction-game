@@ -120,7 +120,7 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="w-full py-6 px-6 border-t border-zinc-900 flex flex-col sm:flex-row items-center gap-4 text-xs text-zinc-500 max-w-6xl mx-auto">
-        <p>© 2026 CopaPredict. All rights reserved.</p>
+        <p>© 2026 FIfa Predict. All rights reserved.</p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <span className="text-zinc-600">Built for World Cup 2026</span>
         </nav>

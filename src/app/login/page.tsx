@@ -132,7 +132,7 @@ export default function LoginPage() {
             }}
             className="text-sm text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer"
           >
-            {isLogin ? "New to CopaPredict? Sign up here" : "Already have an account? Sign in"}
+            {isLogin ? "New to Fifa Predict? Sign up here" : "Already have an account? Sign in"}
           </button>
         </div>
       </div>
