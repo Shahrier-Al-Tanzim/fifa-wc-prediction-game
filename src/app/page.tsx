@@ -11,7 +11,7 @@ export default async function Home() {
       <header className="px-6 h-16 flex items-center border-b border-zinc-900 bg-zinc-950/50 backdrop-blur-md sticky top-0 z-50">
         <Link className="flex items-center gap-2 font-bold text-lg text-white tracking-tight" href="/">
           <Trophy className="h-5 w-5 text-emerald-400" />
-          <span>Copa<span className="text-emerald-400">Predict</span></span>
+          <span>Fifa<span className="text-emerald-400">Predict</span></span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6 items-center">
           {session ? (
@@ -120,7 +120,7 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="w-full py-6 px-6 border-t border-zinc-900 flex flex-col sm:flex-row items-center gap-4 text-xs text-zinc-500 max-w-6xl mx-auto">
-        <p>© 2026 CopaPredict. All rights reserved.</p>
+        <p>© 2026 FIfa Predict. All rights reserved.</p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <span className="text-zinc-600">Built for World Cup 2026</span>
         </nav>
