@@ -11,7 +11,7 @@ export default async function Home() {
       <header className="px-6 h-16 flex items-center border-b border-zinc-900 bg-zinc-950/50 backdrop-blur-md sticky top-0 z-50">
         <Link className="flex items-center gap-2 font-bold text-lg text-white tracking-tight" href="/">
           <Trophy className="h-5 w-5 text-emerald-400" />
-          <span>Copa<span className="text-emerald-400">Predict</span></span>
+          <span>Fifa<span className="text-emerald-400">Predict</span></span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6 items-center">
           {session ? (

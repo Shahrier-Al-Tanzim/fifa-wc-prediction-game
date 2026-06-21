@@ -515,7 +515,7 @@ export default function DashboardPage() {
       <header className="px-6 h-16 flex items-center border-b border-zinc-900 bg-zinc-950/70 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2 font-bold text-lg text-white">
           <Trophy className="h-5 w-5 text-emerald-400" />
-          <span>Copa<span className="text-emerald-400">Predict</span></span>
+          <span>Fifa<span className="text-emerald-400">Predict</span></span>
         </div>
         
         <div className="ml-auto flex items-center gap-4">
