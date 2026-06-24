@@ -1,6 +1,6 @@
-# CopaPredict - FIFA World Cup Prediction Game
+# FifaPredict - FIFA World Cup Prediction Game
 
-CopaPredict is a premium, state-of-the-art Next.js web application designed for football enthusiasts to predict matches, lock in predictions daily, and compete on a real-time global leaderboard. It features custom administrator panels for scheduling fixtures, editing team names (to resolve knockout placeholders dynamically), manual score grading, and force-unlocking user drafts.
+FifaPredict is a premium, state-of-the-art Next.js web application designed for football enthusiasts to predict matches, lock in predictions daily, and compete on a real-time global leaderboard. It features custom administrator panels for scheduling fixtures, editing team names (to resolve knockout placeholders dynamically), manual score grading, force-unlocking user drafts, and directly overriding standings points.
 
 ---
 
@@ -33,8 +33,18 @@ CopaPredict is a premium, state-of-the-art Next.js web application designed for 
   - **Correct prediction**: `+1 point`.
   - **Incorrect prediction**: `0 points`.
   - **Draw outcomes**: Custom `Draw` status badge (`0 points`) instead of "Incorrect".
+* **Auto-Scrolling Comfort**:
+  - The horizontal date picker bar automatically scrolls the active tournament date button into the center of the viewport upon page mount or tab changes.
 
-### 2. Admin Users
+### 2. Guest / Anonymous Users
+* **Read-Only Dashboard**:
+  - Browse Matches, Predictions, and Leaderboard tabs in read-only mode without logging in.
+  - Interactive prediction inputs and lock actions are disabled.
+* **Privacy Anonymizer**:
+  - All player usernames are dynamically anonymized (e.g. `Predictor #5124`) using a deterministic id-hashing utility, protecting users' private identities from public visitors.
+  - Shows community prediction selections once matches have kicked off.
+
+### 3. Admin Users
 * **Batch Results Entry**:
   - Enter the exact scores (Home vs. Away) for completed fixtures.
   - The winner is automatically evaluated from the input scores, with a manual override option.
@@ -42,13 +52,18 @@ CopaPredict is a premium, state-of-the-art Next.js web application designed for 
   - Auto-sync and seed match schedules from external data sources.
 * **Leaderboard Points Synchronization**:
   - Trigger global scoring runs to recalculate all user points according to actual match outcomes.
+  - **Prediction Re-grading & Reset**: Refactored logic to re-evaluate already graded predictions if results are updated, and automatically reset prediction outcomes back to `null` if a match result is deleted.
   - Features safeguard overrides to protect baseline/manually-seeded starting scores for inactive users.
+* **Standings Points Override**:
+  - Edit standing scores directly on the leaderboard standings list with an inline input form.
 * **Fixture Editor (CMS)**:
   - Separate CMS interface (`/admin/matches`) for administrative controls.
   - Search matches by team names, filter by knockout placeholders (e.g. `Winner Group A`), and update placeholder strings to official country names.
   - Includes flag resolution for dynamically renamed countries.
 * **Prediction Unlocks**:
   - Force-unlock any user's locked predictions for any specific day if correction overrides are required.
+* **Registration Control**:
+  - Securely close registration triggers; the signup API blocks attempts with a `403 Forbidden` error, and the UI replaces the registration link with a "Registrations are currently closed" status.
 
 ---
 
@@ -114,6 +129,7 @@ CRON_SECRET="your-secure-cron-secret-key"
 - `/api/predictions`: Submits predictions for individual fixtures.
 - `/api/predictions/lock-day`: Locks draft predictions for a tournament date.
 - `/api/admin/matches`: Saves batch results and custom match scores (Admins only).
-- `/api/admin/matches/edit`: Renames placeholder team structures for knockout brackets (Admins only).
+- `/api/admin/matches/edit`: Renames placeholder team names in brackets (Admins only).
 - `/api/admin/predictions/unlock`: Force-unlocks user predictions (Admins only).
 - `/api/admin/sync-points`: Recomputes leaderboard scores (Admins only).
+- `/api/admin/users/points`: Overwrites standing points for specific users (Admins only).
