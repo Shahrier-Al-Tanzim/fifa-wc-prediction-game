@@ -1,41 +1,66 @@
 import { prisma } from "./prisma";
 
 export async function gradePredictions(): Promise<number> {
-  // 1. Find all matches with a Result and grade their pending predictions (where isCorrect is null)
-  const pendingPredictions = await prisma.prediction.findMany({
+  // 1. Fetch all matches that have a Result
+  const completedMatches = await prisma.match.findMany({
     where: {
-      isCorrect: null,
-      match: {
-        result: { isNot: null },
-      },
+      result: { isNot: null },
     },
     include: {
-      match: {
-        include: {
-          result: true,
-        },
-      },
+      result: true,
+    },
+  });
+
+  const completedMatchIds = completedMatches.map((m) => m.id);
+
+  // 2. Fetch all predictions for these completed matches
+  const predictionsToGrade = await prisma.prediction.findMany({
+    where: {
+      matchId: { in: completedMatchIds },
     },
   });
 
   let gradedCount = 0;
 
-  for (const prediction of pendingPredictions) {
-    const winner = prediction.match.result?.winner;
+  for (const prediction of predictionsToGrade) {
+    const match = completedMatches.find((m) => m.id === prediction.matchId);
+    const winner = match?.result?.winner;
     if (!winner) continue;
 
     const isCorrect = prediction.predictedWinner === winner;
     const pointsAwarded = isCorrect ? 1 : 0;
 
-    // Update prediction status
+    // Only update if the status changed or was previously ungraded
+    if (prediction.isCorrect !== isCorrect || prediction.pointsAwarded !== pointsAwarded) {
+      await prisma.prediction.update({
+        where: { id: prediction.id },
+        data: {
+          isCorrect,
+          pointsAwarded,
+        },
+      });
+      gradedCount++;
+    }
+  }
+
+  // 3. Reset predictions back to null if the match result was deleted
+  const predictionsToReset = await prisma.prediction.findMany({
+    where: {
+      isCorrect: { not: null },
+      match: {
+        result: null,
+      },
+    },
+  });
+
+  for (const prediction of predictionsToReset) {
     await prisma.prediction.update({
       where: { id: prediction.id },
       data: {
-        isCorrect,
-        pointsAwarded,
+        isCorrect: null,
+        pointsAwarded: 0,
       },
     });
-
     gradedCount++;
   }
 
