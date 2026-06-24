@@ -62,8 +62,8 @@ FifaPredict is a premium, state-of-the-art Next.js web application designed for 
   - Includes flag resolution for dynamically renamed countries.
 * **Prediction Unlocks**:
   - Force-unlock any user's locked predictions for any specific day if correction overrides are required.
-* **Registration Control**:
-  - Securely close registration triggers; the signup API blocks attempts with a `403 Forbidden` error, and the UI replaces the registration link with a "Registrations are currently closed" status.
+* **Registration Support**:
+  - Allows users to register a new account when registration is open.
 
 ---
 
