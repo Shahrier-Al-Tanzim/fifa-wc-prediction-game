@@ -176,11 +176,11 @@ export default function DashboardPage() {
     try {
       const userRes = await fetch("/api/auth/me");
       const userData = await userRes.json();
-      if (!userRes.ok || !userData.user) {
-        router.push("/login");
-        return;
+      if (userRes.ok && userData.user) {
+        setUser(userData.user);
+      } else {
+        setUser(null);
       }
-      setUser(userData.user);
 
       const matchesRes = await fetch("/api/matches", {
         headers: { "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone },
@@ -554,7 +554,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) return null;
+  // Removed session redirect gate for visitors
 
   const now = new Date();
   const uniqueDates = Array.from(
@@ -587,19 +587,30 @@ export default function DashboardPage() {
         </div>
         
         <div className="ml-auto flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-zinc-900 px-3.5 py-1.5 rounded-lg border border-zinc-800 text-sm">
-            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-            <span className="text-zinc-400">Score:</span>
-            <span className="font-bold text-white">{user.points} pts</span>
-          </div>
+          {user ? (
+            <>
+              <div className="flex items-center gap-2 bg-zinc-900 px-3.5 py-1.5 rounded-lg border border-zinc-800 text-sm">
+                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                <span className="text-zinc-400">Score:</span>
+                <span className="font-bold text-white">{user.points} pts</span>
+              </div>
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => router.push("/login")}
+              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-all cursor-pointer shadow-md shadow-emerald-950/20"
+            >
+              <span>Login / Sign Up</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -626,11 +637,15 @@ export default function DashboardPage() {
         {/* Profile Card */}
         <div className="bg-radial from-zinc-900 to-zinc-950 border border-zinc-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Welcome, {user.username}!</h1>
-            <p className="text-zinc-400 text-sm mt-1">Get ready to predict daily matches and compete with your friends.</p>
+            <h1 className="text-2xl font-bold text-white">Welcome, {user ? user.username : "Guest"}!</h1>
+            <p className="text-zinc-400 text-sm mt-1">
+              {user 
+                ? "Get ready to predict daily matches and compete with your friends."
+                : "Create an account to save predictions and join the live leaderboard."}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {user.isAdmin && (
+            {user?.isAdmin && (
               <button
                 onClick={handleSyncMatches}
                 disabled={syncing}
@@ -640,7 +655,7 @@ export default function DashboardPage() {
                 {syncing ? "Syncing..." : "Sync Fixtures"}
               </button>
             )}
-            {user.isAdmin && (
+            {user?.isAdmin && (
               <button
                 onClick={handleSyncPoints}
                 disabled={syncingPoints}
@@ -650,7 +665,7 @@ export default function DashboardPage() {
                 {syncingPoints ? "Syncing Points..." : "Sync Points"}
               </button>
             )}
-            {user.isAdmin && (
+            {user?.isAdmin && (
               <button
                 onClick={() => router.push("/admin/matches")}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer"
@@ -753,7 +768,7 @@ export default function DashboardPage() {
             )}
 
             {/* Lock Day Section */}
-            {!user.isAdmin && uniqueDates.length > 0 && selectedDate && (
+            {(!user || !user.isAdmin) && uniqueDates.length > 0 && selectedDate && (
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-900/40 border border-zinc-850 p-4 rounded-xl gap-4">
                 <div>
                   <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -779,7 +794,7 @@ export default function DashboardPage() {
                 {!isSelectedDateLocked && filteredMatches.length > 0 && (
                   <button
                     onClick={handleLockDay}
-                    disabled={lockingDay || !allMatchesPredicted}
+                    disabled={lockingDay || !allMatchesPredicted || !user}
                     className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-950/20 cursor-pointer transition-all flex items-center justify-center gap-1.5"
                   >
                     {lockingDay ? (
@@ -796,7 +811,7 @@ export default function DashboardPage() {
             )}
 
             {/* Admin Lock Results Section */}
-            {user.isAdmin && uniqueDates.length > 0 && selectedDate && (
+            {user?.isAdmin && uniqueDates.length > 0 && selectedDate && (
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-900/40 border border-amber-500/10 p-4 rounded-xl gap-4">
                 <div>
                   <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -913,7 +928,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Prediction Button Controllers */}
-                    {!user.isAdmin && (
+                    {(!user || !user?.isAdmin) && (
                       <div className="space-y-2.5">
                         <div className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
                           Predict Winner
@@ -921,12 +936,12 @@ export default function DashboardPage() {
 
                         <div className="grid grid-cols-2 gap-2">
                           <button
-                            disabled={isMatchLocked}
+                            disabled={isMatchLocked || !user}
                             onClick={() => handlePredictDraft(match.id, "HOME")}
                             className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                               currentPrediction === "HOME"
                                 ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                                : isMatchLocked
+                                : isMatchLocked || !user
                                 ? "bg-zinc-950 border-zinc-900 text-zinc-600"
                                 : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
                             }`}
@@ -934,12 +949,12 @@ export default function DashboardPage() {
                             {match.homeTeam}
                           </button>
                           <button
-                            disabled={isMatchLocked}
+                            disabled={isMatchLocked || !user}
                             onClick={() => handlePredictDraft(match.id, "AWAY")}
                             className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                               currentPrediction === "AWAY"
                                 ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-900/30"
-                                : isMatchLocked
+                                : isMatchLocked || !user
                                 ? "bg-zinc-950 border-zinc-900 text-zinc-600"
                                 : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-white"
                             }`}
@@ -951,7 +966,7 @@ export default function DashboardPage() {
                     )}
 
                     {/* Admin Panel Winner Selector & Scores */}
-                    {user.isAdmin && (
+                    {user?.isAdmin && (
                       <div className="mt-3 pt-3 border-t border-zinc-850 flex flex-col gap-3 bg-zinc-950/40 p-3 rounded-lg border border-amber-500/10">
                         <div className="flex justify-between items-center">
                           <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
@@ -1159,7 +1174,7 @@ export default function DashboardPage() {
             {/* Predictions List - Grouped by User */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {leaderboard.map((player) => {
-                const isSelf = player.id === user.id;
+                const isSelf = user ? player.id === user.id : false;
 
                 return (
                   <div
@@ -1217,7 +1232,7 @@ export default function DashboardPage() {
                         );
                       })}
                     </div>
-                    {user.isAdmin && (
+                    {user?.isAdmin && (
                       <button
                         onClick={() => handleUnlockUserPredictions(player.id, player.username)}
                         className="w-full text-center py-1.5 px-3 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded-lg text-xs font-semibold cursor-pointer transition-all mt-3"
@@ -1255,7 +1270,7 @@ export default function DashboardPage() {
               </div>
 
               {leaderboard.map((item, index) => {
-                const isCurrentUser = item.id === user.id;
+                const isCurrentUser = user ? item.id === user.id : false;
                 
                 return (
                   <div
@@ -1281,7 +1296,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     {/* Render score editable for admin */}
-                    {user.isAdmin ? (
+                    {user?.isAdmin ? (
                       editingPointsUserId === item.id ? (
                         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <input

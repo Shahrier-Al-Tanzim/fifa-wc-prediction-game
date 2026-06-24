@@ -125,15 +125,21 @@ export default function LoginPage() {
         </form>
 
         <div className="text-center mt-4">
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError("");
-            }}
-            className="text-sm text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer"
-          >
-            {isLogin ? "New to Fifa Predict? Sign up here" : "Already have an account? Sign in"}
-          </button>
+          {isLogin ? (
+            <span className="text-xs text-zinc-600 font-semibold uppercase tracking-wider">
+              Registrations are currently closed
+            </span>
+          ) : (
+            <button
+              onClick={() => {
+                setIsLogin(true);
+                setError("");
+              }}
+              className="text-sm text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer"
+            >
+              Already have an account? Sign in
+            </button>
+          )}
         </div>
       </div>
     </div>

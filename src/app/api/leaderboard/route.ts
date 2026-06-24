@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { getAnonName } from "@/lib/anon-utils";
 
 export async function GET() {
   try {
+    const session = await getSession();
+
     const users = await prisma.user.findMany({
       where: {
         isAdmin: false,
@@ -15,7 +19,13 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ leaderboard: users });
+    const responseLeaderboard = users.map((u) => ({
+      id: u.id,
+      username: session ? u.username : getAnonName(u.id),
+      points: u.points,
+    }));
+
+    return NextResponse.json({ leaderboard: responseLeaderboard });
   } catch (error: any) {
     console.error("Leaderboard fetch failed:", error);
     return NextResponse.json(

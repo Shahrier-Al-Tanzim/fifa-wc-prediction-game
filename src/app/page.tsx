@@ -74,7 +74,7 @@ export default async function Home() {
               ) : (
                 <Link
                   className="flex items-center justify-center gap-1.5 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/20 transition-all text-sm group"
-                  href="/login"
+                  href="/dashboard"
                 >
                   Join Prediction League
                   <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
