@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Trophy, LogOut, Calendar, Star, Users, Check, Clock, AlertCircle, RefreshCw, Lock, Unlock, Settings, Edit2, X } from "lucide-react";
 
@@ -151,6 +151,7 @@ function getFlagUrl(countryName: string): string | null {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const selectedDateRef = useRef<HTMLButtonElement | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [draftPredictions, setDraftPredictions] = useState<Record<string, "HOME" | "AWAY" | "DRAW">>({});
@@ -266,6 +267,19 @@ export default function DashboardPage() {
   useEffect(() => {
     localStorage.setItem("dashboard_activeTab", activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (selectedDateRef.current) {
+        selectedDateRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [selectedDate, activeTab]);
 
   useEffect(() => {
     if (matches.length > 0) {
@@ -707,6 +721,7 @@ export default function DashboardPage() {
                     return (
                       <button
                         key={dateStr}
+                        ref={isSelected ? selectedDateRef : null}
                         onClick={() => setSelectedDate(dateStr)}
                         className={`flex flex-col items-center min-w-[95px] p-2.5 rounded-xl border transition-all cursor-pointer relative ${
                           isSelected
@@ -1115,6 +1130,7 @@ export default function DashboardPage() {
                     return (
                       <button
                         key={dateStr}
+                        ref={isSelected ? selectedDateRef : null}
                         onClick={() => setSelectedDate(dateStr)}
                         className={`flex flex-col items-center min-w-[95px] p-2.5 rounded-xl border transition-all cursor-pointer relative ${
                           isSelected
