@@ -1,4 +1,4 @@
-# FifaPredict - FIFA World Cup Prediction Game
+# FIfaPredict - FIFA World Cup Prediction Game
 
 FifaPredict is a premium, state-of-the-art Next.js web application designed for football enthusiasts to predict matches, lock in predictions daily, and compete on a real-time global leaderboard. It features custom administrator panels for scheduling fixtures, editing team names (to resolve knockout placeholders dynamically), manual score grading, force-unlocking user drafts, and directly overriding standings points.
 
