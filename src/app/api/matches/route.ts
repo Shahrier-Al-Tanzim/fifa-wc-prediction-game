@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { syncMatches } from "@/lib/football-api";
 import { getLocalDateStr } from "@/lib/date-utils";
+import { getAnonName } from "@/lib/anon-utils";
 
 export async function GET(req: Request) {
   try {
@@ -47,6 +48,12 @@ export async function GET(req: Request) {
       const matchesWithOthers = matches.map((match) => {
         const isKickoffPassed = now >= new Date(match.matchDate);
         const others = predictionsByMatch.get(match.id) || [];
+        const anonymizedOthers = isKickoffPassed
+          ? others.map((o) => ({
+              username: getAnonName(o.userId),
+              prediction: o.prediction,
+            }))
+          : [];
         // Extract plain match fields to avoid sending relation objects
         const { result, ...matchData } = match;
         return {
@@ -56,7 +63,7 @@ export async function GET(req: Request) {
           homeScore: result ? matchData.homeScore : null,
           awayScore: result ? matchData.awayScore : null,
           userPrediction: null,
-          otherPredictions: isKickoffPassed ? others : [],
+          otherPredictions: anonymizedOthers,
         };
       });
 
