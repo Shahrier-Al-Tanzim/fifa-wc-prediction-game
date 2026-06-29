@@ -1,7 +1,7 @@
 [
   {
     "matchNumber": 1,
-    "date": "2026-06-11",
+    "date": "2026-06-12",
     "kickoffUtc": "2026-06-11T19:00:00Z",
     "stage": "group-stage",
     "group": "A",
@@ -13,7 +13,7 @@
   },
   {
     "matchNumber": 2,
-    "date": "2026-06-11",
+    "date": "2026-06-12",
     "kickoffUtc": "2026-06-12T02:00:00Z",
     "stage": "group-stage",
     "group": "A",
@@ -25,7 +25,7 @@
   },
   {
     "matchNumber": 3,
-    "date": "2026-06-12",
+    "date": "2026-06-13",
     "kickoffUtc": "2026-06-12T19:00:00Z",
     "stage": "group-stage",
     "group": "B",
@@ -37,7 +37,7 @@
   },
   {
     "matchNumber": 4,
-    "date": "2026-06-12",
+    "date": "2026-06-13",
     "kickoffUtc": "2026-06-13T01:00:00Z",
     "stage": "group-stage",
     "group": "D",
@@ -49,7 +49,7 @@
   },
   {
     "matchNumber": 5,
-    "date": "2026-06-13",
+    "date": "2026-06-14",
     "kickoffUtc": "2026-06-14T01:00:00Z",
     "stage": "group-stage",
     "group": "C",
@@ -61,7 +61,7 @@
   },
   {
     "matchNumber": 6,
-    "date": "2026-06-13",
+    "date": "2026-06-14",
     "kickoffUtc": "2026-06-14T04:00:00Z",
     "stage": "group-stage",
     "group": "D",
@@ -73,7 +73,7 @@
   },
   {
     "matchNumber": 7,
-    "date": "2026-06-13",
+    "date": "2026-06-14",
     "kickoffUtc": "2026-06-13T22:00:00Z",
     "stage": "group-stage",
     "group": "C",
@@ -85,7 +85,7 @@
   },
   {
     "matchNumber": 8,
-    "date": "2026-06-13",
+    "date": "2026-06-14",
     "kickoffUtc": "2026-06-13T19:00:00Z",
     "stage": "group-stage",
     "group": "B",
@@ -97,7 +97,7 @@
   },
   {
     "matchNumber": 9,
-    "date": "2026-06-14",
+    "date": "2026-06-15",
     "kickoffUtc": "2026-06-14T23:00:00Z",
     "stage": "group-stage",
     "group": "E",
@@ -121,7 +121,7 @@
   },
   {
     "matchNumber": 11,
-    "date": "2026-06-14",
+    "date": "2026-06-15",
     "kickoffUtc": "2026-06-14T20:00:00Z",
     "stage": "group-stage",
     "group": "F",
@@ -133,7 +133,7 @@
   },
   {
     "matchNumber": 12,
-    "date": "2026-06-14",
+    "date": "2026-06-15",
     "kickoffUtc": "2026-06-15T02:00:00Z",
     "stage": "group-stage",
     "group": "F",
@@ -145,7 +145,7 @@
   },
   {
     "matchNumber": 13,
-    "date": "2026-06-15",
+    "date": "2026-06-16",
     "kickoffUtc": "2026-06-15T22:00:00Z",
     "stage": "group-stage",
     "group": "H",
@@ -169,7 +169,7 @@
   },
   {
     "matchNumber": 15,
-    "date": "2026-06-15",
+    "date": "2026-06-16",
     "kickoffUtc": "2026-06-16T01:00:00Z",
     "stage": "group-stage",
     "group": "G",
@@ -181,7 +181,7 @@
   },
   {
     "matchNumber": 16,
-    "date": "2026-06-15",
+    "date": "2026-06-16",
     "kickoffUtc": "2026-06-15T19:00:00Z",
     "stage": "group-stage",
     "group": "G",
@@ -193,7 +193,7 @@
   },
   {
     "matchNumber": 17,
-    "date": "2026-06-16",
+    "date": "2026-06-17",
     "kickoffUtc": "2026-06-16T19:00:00Z",
     "stage": "group-stage",
     "group": "I",
@@ -205,7 +205,7 @@
   },
   {
     "matchNumber": 18,
-    "date": "2026-06-16",
+    "date": "2026-06-17",
     "kickoffUtc": "2026-06-16T22:00:00Z",
     "stage": "group-stage",
     "group": "I",
@@ -217,7 +217,7 @@
   },
   {
     "matchNumber": 19,
-    "date": "2026-06-16",
+    "date": "2026-06-17",
     "kickoffUtc": "2026-06-17T01:00:00Z",
     "stage": "group-stage",
     "group": "J",
@@ -229,7 +229,7 @@
   },
   {
     "matchNumber": 20,
-    "date": "2026-06-16",
+    "date": "2026-06-17",
     "kickoffUtc": "2026-06-17T04:00:00Z",
     "stage": "group-stage",
     "group": "J",
@@ -241,7 +241,7 @@
   },
   {
     "matchNumber": 21,
-    "date": "2026-06-17",
+    "date": "2026-06-18",
     "kickoffUtc": "2026-06-17T23:00:00Z",
     "stage": "group-stage",
     "group": "L",
@@ -253,7 +253,7 @@
   },
   {
     "matchNumber": 22,
-    "date": "2026-06-17",
+    "date": "2026-06-18",
     "kickoffUtc": "2026-06-17T20:00:00Z",
     "stage": "group-stage",
     "group": "L",
@@ -277,7 +277,7 @@
   },
   {
     "matchNumber": 24,
-    "date": "2026-06-17",
+    "date": "2026-06-18",
     "kickoffUtc": "2026-06-18T02:00:00Z",
     "stage": "group-stage",
     "group": "K",
@@ -301,7 +301,7 @@
   },
   {
     "matchNumber": 26,
-    "date": "2026-06-18",
+    "date": "2026-06-19",
     "kickoffUtc": "2026-06-18T19:00:00Z",
     "stage": "group-stage",
     "group": "B",
@@ -313,7 +313,7 @@
   },
   {
     "matchNumber": 27,
-    "date": "2026-06-18",
+    "date": "2026-06-19",
     "kickoffUtc": "2026-06-18T22:00:00Z",
     "stage": "group-stage",
     "group": "B",
@@ -325,7 +325,7 @@
   },
   {
     "matchNumber": 28,
-    "date": "2026-06-18",
+    "date": "2026-06-19",
     "kickoffUtc": "2026-06-19T01:00:00Z",
     "stage": "group-stage",
     "group": "A",
@@ -337,7 +337,7 @@
   },
   {
     "matchNumber": 29,
-    "date": "2026-06-19",
+    "date": "2026-06-20",
     "kickoffUtc": "2026-06-20T01:00:00Z",
     "stage": "group-stage",
     "group": "C",
@@ -349,7 +349,7 @@
   },
   {
     "matchNumber": 30,
-    "date": "2026-06-19",
+    "date": "2026-06-20",
     "kickoffUtc": "2026-06-19T22:00:00Z",
     "stage": "group-stage",
     "group": "C",
@@ -361,7 +361,7 @@
   },
   {
     "matchNumber": 31,
-    "date": "2026-06-19",
+    "date": "2026-06-20",
     "kickoffUtc": "2026-06-20T03:00:00Z",
     "stage": "group-stage",
     "group": "D",
@@ -373,7 +373,7 @@
   },
   {
     "matchNumber": 32,
-    "date": "2026-06-19",
+    "date": "2026-06-20",
     "kickoffUtc": "2026-06-19T19:00:00Z",
     "stage": "group-stage",
     "group": "D",
@@ -385,7 +385,7 @@
   },
   {
     "matchNumber": 33,
-    "date": "2026-06-20",
+    "date": "2026-06-21",
     "kickoffUtc": "2026-06-20T20:00:00Z",
     "stage": "group-stage",
     "group": "E",
@@ -397,7 +397,7 @@
   },
   {
     "matchNumber": 34,
-    "date": "2026-06-20",
+    "date": "2026-06-21",
     "kickoffUtc": "2026-06-21T00:00:00Z",
     "stage": "group-stage",
     "group": "E",
@@ -421,7 +421,7 @@
   },
   {
     "matchNumber": 36,
-    "date": "2026-06-20",
+    "date": "2026-06-21",
     "kickoffUtc": "2026-06-21T04:00:00Z",
     "stage": "group-stage",
     "group": "F",
@@ -433,7 +433,7 @@
   },
   {
     "matchNumber": 37,
-    "date": "2026-06-21",
+    "date": "2026-06-22",
     "kickoffUtc": "2026-06-21T22:00:00Z",
     "stage": "group-stage",
     "group": "H",
@@ -457,7 +457,7 @@
   },
   {
     "matchNumber": 39,
-    "date": "2026-06-21",
+    "date": "2026-06-22",
     "kickoffUtc": "2026-06-21T19:00:00Z",
     "stage": "group-stage",
     "group": "G",
@@ -469,7 +469,7 @@
   },
   {
     "matchNumber": 40,
-    "date": "2026-06-21",
+    "date": "2026-06-22",
     "kickoffUtc": "2026-06-22T01:00:00Z",
     "stage": "group-stage",
     "group": "G",
@@ -481,7 +481,7 @@
   },
   {
     "matchNumber": 41,
-    "date": "2026-06-22",
+    "date": "2026-06-23",
     "kickoffUtc": "2026-06-23T00:00:00Z",
     "stage": "group-stage",
     "group": "I",
@@ -493,7 +493,7 @@
   },
   {
     "matchNumber": 42,
-    "date": "2026-06-22",
+    "date": "2026-06-23",
     "kickoffUtc": "2026-06-22T21:00:00Z",
     "stage": "group-stage",
     "group": "I",
@@ -517,7 +517,7 @@
   },
   {
     "matchNumber": 44,
-    "date": "2026-06-22",
+    "date": "2026-06-23",
     "kickoffUtc": "2026-06-23T03:00:00Z",
     "stage": "group-stage",
     "group": "J",
@@ -529,7 +529,7 @@
   },
   {
     "matchNumber": 45,
-    "date": "2026-06-23",
+    "date": "2026-06-24",
     "kickoffUtc": "2026-06-23T20:00:00Z",
     "stage": "group-stage",
     "group": "L",
@@ -541,7 +541,7 @@
   },
   {
     "matchNumber": 46,
-    "date": "2026-06-23",
+    "date": "2026-06-24",
     "kickoffUtc": "2026-06-23T23:00:00Z",
     "stage": "group-stage",
     "group": "L",
@@ -565,7 +565,7 @@
   },
   {
     "matchNumber": 48,
-    "date": "2026-06-23",
+    "date": "2026-06-24",
     "kickoffUtc": "2026-06-24T02:00:00Z",
     "stage": "group-stage",
     "group": "K",
@@ -577,7 +577,7 @@
   },
   {
     "matchNumber": 49,
-    "date": "2026-06-24",
+    "date": "2026-06-25",
     "kickoffUtc": "2026-06-24T22:00:00Z",
     "stage": "group-stage",
     "group": "C",
@@ -589,7 +589,7 @@
   },
   {
     "matchNumber": 50,
-    "date": "2026-06-24",
+    "date": "2026-06-25",
     "kickoffUtc": "2026-06-24T22:00:00Z",
     "stage": "group-stage",
     "group": "C",
@@ -601,7 +601,7 @@
   },
   {
     "matchNumber": 51,
-    "date": "2026-06-24",
+    "date": "2026-06-25",
     "kickoffUtc": "2026-06-24T19:00:00Z",
     "stage": "group-stage",
     "group": "B",
@@ -613,7 +613,7 @@
   },
   {
     "matchNumber": 52,
-    "date": "2026-06-24",
+    "date": "2026-06-25",
     "kickoffUtc": "2026-06-24T19:00:00Z",
     "stage": "group-stage",
     "group": "B",
@@ -625,7 +625,7 @@
   },
   {
     "matchNumber": 53,
-    "date": "2026-06-24",
+    "date": "2026-06-25",
     "kickoffUtc": "2026-06-25T01:00:00Z",
     "stage": "group-stage",
     "group": "A",
@@ -637,7 +637,7 @@
   },
   {
     "matchNumber": 54,
-    "date": "2026-06-24",
+    "date": "2026-06-25",
     "kickoffUtc": "2026-06-25T01:00:00Z",
     "stage": "group-stage",
     "group": "A",
@@ -649,7 +649,7 @@
   },
   {
     "matchNumber": 55,
-    "date": "2026-06-25",
+    "date": "2026-06-26",
     "kickoffUtc": "2026-06-25T20:00:00Z",
     "stage": "group-stage",
     "group": "E",
@@ -661,7 +661,7 @@
   },
   {
     "matchNumber": 56,
-    "date": "2026-06-25",
+    "date": "2026-06-26",
     "kickoffUtc": "2026-06-25T20:00:00Z",
     "stage": "group-stage",
     "group": "E",
@@ -673,7 +673,7 @@
   },
   {
     "matchNumber": 57,
-    "date": "2026-06-25",
+    "date": "2026-06-26",
     "kickoffUtc": "2026-06-25T23:00:00Z",
     "stage": "group-stage",
     "group": "F",
@@ -685,7 +685,7 @@
   },
   {
     "matchNumber": 58,
-    "date": "2026-06-25",
+    "date": "2026-06-26",
     "kickoffUtc": "2026-06-25T23:00:00Z",
     "stage": "group-stage",
     "group": "F",
@@ -697,7 +697,7 @@
   },
   {
     "matchNumber": 59,
-    "date": "2026-06-25",
+    "date": "2026-06-26",
     "kickoffUtc": "2026-06-26T02:00:00Z",
     "stage": "group-stage",
     "group": "D",
@@ -709,7 +709,7 @@
   },
   {
     "matchNumber": 60,
-    "date": "2026-06-25",
+    "date": "2026-06-26",
     "kickoffUtc": "2026-06-26T02:00:00Z",
     "stage": "group-stage",
     "group": "D",
@@ -721,7 +721,7 @@
   },
   {
     "matchNumber": 61,
-    "date": "2026-06-26",
+    "date": "2026-06-27",
     "kickoffUtc": "2026-06-26T19:00:00Z",
     "stage": "group-stage",
     "group": "I",
@@ -733,7 +733,7 @@
   },
   {
     "matchNumber": 62,
-    "date": "2026-06-26",
+    "date": "2026-06-27",
     "kickoffUtc": "2026-06-26T19:00:00Z",
     "stage": "group-stage",
     "group": "I",
@@ -745,7 +745,7 @@
   },
   {
     "matchNumber": 63,
-    "date": "2026-06-26",
+    "date": "2026-06-27",
     "kickoffUtc": "2026-06-27T03:00:00Z",
     "stage": "group-stage",
     "group": "G",
@@ -757,7 +757,7 @@
   },
   {
     "matchNumber": 64,
-    "date": "2026-06-26",
+    "date": "2026-06-27",
     "kickoffUtc": "2026-06-27T03:00:00Z",
     "stage": "group-stage",
     "group": "G",
@@ -769,7 +769,7 @@
   },
   {
     "matchNumber": 65,
-    "date": "2026-06-26",
+    "date": "2026-06-27",
     "kickoffUtc": "2026-06-27T00:00:00Z",
     "stage": "group-stage",
     "group": "H",
@@ -781,7 +781,7 @@
   },
   {
     "matchNumber": 66,
-    "date": "2026-06-26",
+    "date": "2026-06-27",
     "kickoffUtc": "2026-06-27T00:00:00Z",
     "stage": "group-stage",
     "group": "H",
@@ -793,7 +793,7 @@
   },
   {
     "matchNumber": 67,
-    "date": "2026-06-27",
+    "date": "2026-06-28",
     "kickoffUtc": "2026-06-27T21:00:00Z",
     "stage": "group-stage",
     "group": "L",
@@ -805,7 +805,7 @@
   },
   {
     "matchNumber": 68,
-    "date": "2026-06-27",
+    "date": "2026-06-28",
     "kickoffUtc": "2026-06-27T21:00:00Z",
     "stage": "group-stage",
     "group": "L",
@@ -817,7 +817,7 @@
   },
   {
     "matchNumber": 69,
-    "date": "2026-06-27",
+    "date": "2026-06-28",
     "kickoffUtc": "2026-06-28T02:00:00Z",
     "stage": "group-stage",
     "group": "J",
@@ -829,7 +829,7 @@
   },
   {
     "matchNumber": 70,
-    "date": "2026-06-27",
+    "date": "2026-06-28",
     "kickoffUtc": "2026-06-28T02:00:00Z",
     "stage": "group-stage",
     "group": "J",
@@ -841,7 +841,7 @@
   },
   {
     "matchNumber": 71,
-    "date": "2026-06-27",
+    "date": "2026-06-28",
     "kickoffUtc": "2026-06-27T23:30:00Z",
     "stage": "group-stage",
     "group": "K",
@@ -853,7 +853,7 @@
   },
   {
     "matchNumber": 72,
-    "date": "2026-06-27",
+    "date": "2026-06-28",
     "kickoffUtc": "2026-06-27T23:30:00Z",
     "stage": "group-stage",
     "group": "K",
@@ -865,36 +865,36 @@
   },
   {
     "matchNumber": 73,
-    "date": "2026-06-28",
+    "date": "2026-06-29",
     "kickoffUtc": "2026-06-28T19:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group A runners-up",
-    "awayTeam": "Group B runners-up",
+    "homeTeam": "South Africa",
+    "awayTeam": "Canada",
     "stadium": "SoFi Stadium",
     "hostCity": "los-angeles",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-a-runners-up-vs-group-b-runners-up-2026-06-28"
   },
   {
     "matchNumber": 74,
-    "date": "2026-06-29",
+    "date": "2026-06-30",
     "kickoffUtc": "2026-06-29T20:30:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group E winners",
-    "awayTeam": "Group A/B/C/D/F third place",
+    "homeTeam": "Germany",
+    "awayTeam": "Paraguay",
     "stadium": "Gillette Stadium",
     "hostCity": "boston",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-e-winners-vs-group-a-b-c-d-f-third-place-2026-06-29"
   },
   {
     "matchNumber": 75,
-    "date": "2026-06-29",
+    "date": "2026-06-30",
     "kickoffUtc": "2026-06-30T01:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group F winners",
-    "awayTeam": "Group C runners-up",
+    "homeTeam": "Netherlands",
+    "awayTeam": "Morocco",
     "stadium": "Estadio BBVA",
     "hostCity": "monterrey",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-f-winners-vs-group-c-runners-up-2026-06-29"
@@ -905,20 +905,20 @@
     "kickoffUtc": "2026-06-29T17:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group C winners",
-    "awayTeam": "Group F runners-up",
+    "homeTeam": "Brazil",
+    "awayTeam": "Japan",
     "stadium": "NRG Stadium",
     "hostCity": "houston",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-c-winners-vs-group-f-runners-up-2026-06-29"
   },
   {
     "matchNumber": 77,
-    "date": "2026-06-30",
+    "date": "2026-07-01",
     "kickoffUtc": "2026-06-30T21:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group I winners",
-    "awayTeam": "Group C/D/F/G/H third place",
+    "homeTeam": "France",
+    "awayTeam": "Sweden",
     "stadium": "MetLife Stadium",
     "hostCity": "new-york",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-i-winners-vs-group-c-d-f-g-h-third-place-2026-06-30"
@@ -929,20 +929,20 @@
     "kickoffUtc": "2026-06-30T17:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group E runners-up",
-    "awayTeam": "Group I runners-up",
+    "homeTeam": "Ivory Coast",
+    "awayTeam": "Norway",
     "stadium": "AT&T Stadium",
     "hostCity": "dallas",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-e-runners-up-vs-group-i-runners-up-2026-06-30"
   },
   {
     "matchNumber": 79,
-    "date": "2026-06-30",
+    "date": "2026-07-01",
     "kickoffUtc": "2026-07-01T01:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group A winners",
-    "awayTeam": "Group C/E/F/H/I third place",
+    "homeTeam": "Mexico",
+    "awayTeam": "Ecuador",
     "stadium": "Estadio Azteca",
     "hostCity": "mexico-city",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-a-winners-vs-group-c-e-f-h-i-third-place-2026-06-30"
@@ -953,111 +953,111 @@
     "kickoffUtc": "2026-07-01T16:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group L winners",
-    "awayTeam": "Group E/H/I/J/K third place",
+    "homeTeam": "England",
+    "awayTeam": "DR Congo",
     "stadium": "Mercedes-Benz Stadium",
     "hostCity": "atlanta",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-l-winners-vs-group-e-h-i-j-k-third-place-2026-07-01"
   },
   {
     "matchNumber": 81,
-    "date": "2026-07-01",
+    "date": "2026-07-02",
     "kickoffUtc": "2026-07-02T00:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group D winners",
-    "awayTeam": "Group B/E/F/I/J third place",
+    "homeTeam": "United States",
+    "awayTeam": "Bosnia and Herzegovina",
     "stadium": "Levi's Stadium",
     "hostCity": "san-francisco",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-d-winners-vs-group-b-e-f-i-j-third-place-2026-07-01"
   },
   {
     "matchNumber": 82,
-    "date": "2026-07-01",
+    "date": "2026-07-02",
     "kickoffUtc": "2026-07-01T20:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group G winners",
-    "awayTeam": "Group A/E/H/I/J third place",
+    "homeTeam": "Belgium",
+    "awayTeam": "Senegal",
     "stadium": "Lumen Field",
     "hostCity": "seattle",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-g-winners-vs-group-a-e-h-i-j-third-place-2026-07-01"
   },
   {
     "matchNumber": 83,
-    "date": "2026-07-02",
+    "date": "2026-07-03",
     "kickoffUtc": "2026-07-02T23:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group K runners-up",
-    "awayTeam": "Group L runners-up",
+    "homeTeam": "Portugal",
+    "awayTeam": "Croatia",
     "stadium": "BMO Field",
     "hostCity": "toronto",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-k-runners-up-vs-group-l-runners-up-2026-07-02"
   },
   {
     "matchNumber": 84,
-    "date": "2026-07-02",
+    "date": "2026-07-03",
     "kickoffUtc": "2026-07-02T19:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group H winners",
-    "awayTeam": "Group J runners-up",
+    "homeTeam": "Spain",
+    "awayTeam": "Austria",
     "stadium": "SoFi Stadium",
     "hostCity": "los-angeles",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-h-winners-vs-group-j-runners-up-2026-07-02"
   },
   {
     "matchNumber": 85,
-    "date": "2026-07-02",
+    "date": "2026-07-03",
     "kickoffUtc": "2026-07-03T03:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group B winners",
-    "awayTeam": "Group E/F/G/I/J third place",
+    "homeTeam": "Switzerland",
+    "awayTeam": "Algeria",
     "stadium": "BC Place",
     "hostCity": "vancouver",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-b-winners-vs-group-e-f-g-i-j-third-place-2026-07-02"
   },
   {
     "matchNumber": 86,
-    "date": "2026-07-03",
+    "date": "2026-07-04",
     "kickoffUtc": "2026-07-03T22:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group J winners",
-    "awayTeam": "Group H runners-up",
+    "homeTeam": "Argentina",
+    "awayTeam": "Cape Verde",
     "stadium": "Hard Rock Stadium",
     "hostCity": "miami",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-j-winners-vs-group-h-runners-up-2026-07-03"
   },
   {
     "matchNumber": 87,
-    "date": "2026-07-03",
+    "date": "2026-07-04",
     "kickoffUtc": "2026-07-04T01:30:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group K winners",
-    "awayTeam": "Group D/E/I/J/L third place",
+    "homeTeam": "Colombia",
+    "awayTeam": "Ghana",
     "stadium": "Arrowhead Stadium",
     "hostCity": "kansas-city",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-k-winners-vs-group-d-e-i-j-l-third-place-2026-07-03"
   },
   {
     "matchNumber": 88,
-    "date": "2026-07-03",
+    "date": "2026-07-04",
     "kickoffUtc": "2026-07-03T18:00:00Z",
     "stage": "round-of-32",
     "group": null,
-    "homeTeam": "Group D runners-up",
-    "awayTeam": "Group G runners-up",
+    "homeTeam": "Australia",
+    "awayTeam": "Egypt",
     "stadium": "AT&T Stadium",
     "hostCity": "dallas",
     "matchUrl": "https://www.thestatsapi.com/world-cup/matches/group-d-runners-up-vs-group-g-runners-up-2026-07-03"
   },
   {
     "matchNumber": 89,
-    "date": "2026-07-04",
+    "date": "2026-07-05",
     "kickoffUtc": "2026-07-04T21:00:00Z",
     "stage": "round-of-16",
     "group": null,
@@ -1081,7 +1081,7 @@
   },
   {
     "matchNumber": 91,
-    "date": "2026-07-05",
+    "date": "2026-07-06",
     "kickoffUtc": "2026-07-05T20:00:00Z",
     "stage": "round-of-16",
     "group": null,
@@ -1093,7 +1093,7 @@
   },
   {
     "matchNumber": 92,
-    "date": "2026-07-05",
+    "date": "2026-07-06",
     "kickoffUtc": "2026-07-06T00:00:00Z",
     "stage": "round-of-16",
     "group": null,
@@ -1105,7 +1105,7 @@
   },
   {
     "matchNumber": 93,
-    "date": "2026-07-06",
+    "date": "2026-07-07",
     "kickoffUtc": "2026-07-06T19:00:00Z",
     "stage": "round-of-16",
     "group": null,
@@ -1117,7 +1117,7 @@
   },
   {
     "matchNumber": 94,
-    "date": "2026-07-06",
+    "date": "2026-07-07",
     "kickoffUtc": "2026-07-07T00:00:00Z",
     "stage": "round-of-16",
     "group": null,
@@ -1141,7 +1141,7 @@
   },
   {
     "matchNumber": 96,
-    "date": "2026-07-07",
+    "date": "2026-07-08",
     "kickoffUtc": "2026-07-07T20:00:00Z",
     "stage": "round-of-16",
     "group": null,
@@ -1153,7 +1153,7 @@
   },
   {
     "matchNumber": 97,
-    "date": "2026-07-09",
+    "date": "2026-07-10",
     "kickoffUtc": "2026-07-09T20:00:00Z",
     "stage": "quarter-finals",
     "group": null,
@@ -1165,7 +1165,7 @@
   },
   {
     "matchNumber": 98,
-    "date": "2026-07-10",
+    "date": "2026-07-11",
     "kickoffUtc": "2026-07-10T19:00:00Z",
     "stage": "quarter-finals",
     "group": null,
@@ -1177,7 +1177,7 @@
   },
   {
     "matchNumber": 99,
-    "date": "2026-07-11",
+    "date": "2026-07-12",
     "kickoffUtc": "2026-07-11T21:00:00Z",
     "stage": "quarter-finals",
     "group": null,
@@ -1189,7 +1189,7 @@
   },
   {
     "matchNumber": 100,
-    "date": "2026-07-11",
+    "date": "2026-07-12",
     "kickoffUtc": "2026-07-12T01:00:00Z",
     "stage": "quarter-finals",
     "group": null,
@@ -1201,7 +1201,7 @@
   },
   {
     "matchNumber": 101,
-    "date": "2026-07-14",
+    "date": "2026-07-15",
     "kickoffUtc": "2026-07-14T19:00:00Z",
     "stage": "semi-finals",
     "group": null,
@@ -1213,7 +1213,7 @@
   },
   {
     "matchNumber": 102,
-    "date": "2026-07-15",
+    "date": "2026-07-16",
     "kickoffUtc": "2026-07-15T19:00:00Z",
     "stage": "semi-finals",
     "group": null,
@@ -1225,7 +1225,7 @@
   },
   {
     "matchNumber": 103,
-    "date": "2026-07-18",
+    "date": "2026-07-19",
     "kickoffUtc": "2026-07-18T21:00:00Z",
     "stage": "third-place",
     "group": null,
@@ -1237,7 +1237,7 @@
   },
   {
     "matchNumber": 104,
-    "date": "2026-07-19",
+    "date": "2026-07-20",
     "kickoffUtc": "2026-07-19T19:00:00Z",
     "stage": "final",
     "group": null,
