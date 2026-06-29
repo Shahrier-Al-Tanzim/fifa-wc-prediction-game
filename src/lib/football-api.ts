@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { prisma } from "./prisma";
-import fixtures from "../data/fixtures.json";
 
 export interface SyncResult {
   source: "api" | "mock";
@@ -11,6 +10,28 @@ export interface SyncResult {
 
 export async function syncMatches(): Promise<SyncResult> {
   let updatedCount = 0;
+
+  // Read fixtures.json dynamically to always get the latest version
+  const fixturesPath = path.resolve(process.cwd(), "src/data/fixtures.json");
+  let fixtures: Array<{
+    matchNumber: number;
+    date: string;
+    kickoffUtc: string;
+    stage: string;
+    group: string | null;
+    homeTeam: string;
+    awayTeam: string;
+    stadium: string;
+    hostCity: string;
+    matchUrl: string;
+  }> = [];
+
+  try {
+    fixtures = JSON.parse(fs.readFileSync(fixturesPath, "utf-8"));
+  } catch (err) {
+    console.error("Failed to parse fixtures.json:", err);
+    return { source: "mock", updatedCount: 0, error: "Failed to read fixtures.json" };
+  }
 
   // Read results.json dynamically to bypass caching
   const resultsPath = path.resolve(process.cwd(), "src/data/results.json");
