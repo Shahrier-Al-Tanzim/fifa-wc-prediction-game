@@ -172,6 +172,14 @@ export default function DashboardPage() {
   const [editPointsValue, setEditPointsValue] = useState<string>("");
   const [savingPointsUserId, setSavingPointsUserId] = useState<string | null>(null);
 
+  // Admin Override Modal states
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideUserId, setOverrideUserId] = useState("");
+  const [overrideMatchId, setOverrideMatchId] = useState("");
+  const [overrideWinner, setOverrideWinner] = useState<"HOME" | "AWAY" | "DRAW">("HOME");
+  const [overrideSubmitting, setOverrideSubmitting] = useState(false);
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+
   const fetchData = async () => {
     try {
       const userRes = await fetch("/api/auth/me");
@@ -219,7 +227,6 @@ export default function DashboardPage() {
         });
         setDraftScores(scores);
       }
-
       const leaderboardRes = await fetch("/api/leaderboard");
       const leaderboardData = await leaderboardRes.json();
       if (leaderboardRes.ok) {
@@ -230,6 +237,37 @@ export default function DashboardPage() {
       router.push("/login");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOverridePick = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!overrideUserId || !overrideMatchId) {
+      setOverrideError("Please select both a user and a match.");
+      return;
+    }
+    setOverrideSubmitting(true);
+    setOverrideError(null);
+    try {
+      const res = await fetch("/api/admin/predictions/submit-override", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: overrideUserId,
+          matchId: overrideMatchId,
+          predictedWinner: overrideWinner,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to submit override.");
+      }
+      setShowOverrideModal(false);
+      fetchData(); // Refresh all data, scores, and predictions
+    } catch (err: any) {
+      setOverrideError(err.message);
+    } finally {
+      setOverrideSubmitting(false);
     }
   };
 
@@ -672,6 +710,21 @@ export default function DashboardPage() {
               >
                 <Settings className="h-4 w-4 text-zinc-400" />
                 Edit Fixtures
+              </button>
+            )}
+            {user?.isAdmin && (
+              <button
+                onClick={() => {
+                  setOverrideUserId("");
+                  setOverrideMatchId(matches[0]?.id || "");
+                  setOverrideWinner("HOME");
+                  setOverrideError(null);
+                  setShowOverrideModal(true);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer"
+              >
+                <Edit2 className="h-4 w-4 text-zinc-400" />
+                Override Pick
               </button>
             )}
             <button
@@ -1358,6 +1411,117 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Override Pick Modal */}
+      {showOverrideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowOverrideModal(false)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-zinc-850 transition-all"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h2 className="text-xl font-bold text-white mb-4">Override Prediction</h2>
+
+            {overrideError && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-3 py-2.5 rounded-xl text-xs mb-4 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{overrideError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleOverridePick} className="space-y-4">
+              {/* Select User */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+                  Select User
+                </label>
+                <select
+                  required
+                  value={overrideUserId}
+                  onChange={(e) => setOverrideUserId(e.target.value)}
+                  className="block w-full px-3 py-2.5 border border-zinc-800 rounded-lg bg-zinc-950 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-sm transition-all"
+                >
+                  <option value="" disabled>-- Select a Player --</option>
+                  {leaderboard.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.username} ({u.points} pts)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Select Match */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+                  Select Match
+                </label>
+                <select
+                  required
+                  value={overrideMatchId}
+                  onChange={(e) => setOverrideMatchId(e.target.value)}
+                  className="block w-full px-3 py-2.5 border border-zinc-800 rounded-lg bg-zinc-950 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-sm transition-all"
+                >
+                  {matches.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      Match {m.apiMatchId}: {m.homeTeam} vs {m.awayTeam} {m.winner ? `(${m.winner} Win)` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Select Prediction */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+                  Select Winner Prediction
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["HOME", "AWAY", "DRAW"] as const).map((win) => {
+                    const matchObj = matches.find(m => m.id === overrideMatchId);
+                    const homeT = matchObj?.homeTeam || "Home";
+                    const awayT = matchObj?.awayTeam || "Away";
+                    let label = "";
+                    if (win === "HOME") label = homeT;
+                    else if (win === "AWAY") label = awayT;
+                    else label = "Draw";
+
+                    return (
+                      <button
+                        key={win}
+                        type="button"
+                        onClick={() => setOverrideWinner(win)}
+                        className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all cursor-pointer truncate ${
+                          overrideWinner === win
+                            ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-950/20"
+                            : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={overrideSubmitting}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {overrideSubmitting ? (
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    "Save Override"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
